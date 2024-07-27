@@ -1,5 +1,4 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 
 #include "polyscope/render/opengl/shaders/lighting_shaders.h"
 #include "polyscope/render/opengl/shaders/texture_draw_shaders.h"
@@ -17,10 +16,10 @@ const ShaderStageSpecification MAP_LIGHT_FRAG_SHADER = {
     
     // uniforms
     { 
-        {"u_exposure", RenderDataType::Float},
-        {"u_gamma", RenderDataType::Float},
-        {"u_whiteLevel", RenderDataType::Float},
-        {"u_texelSize", RenderDataType::Vector2Float},
+        {"u_exposure", DataType::Float},
+        {"u_gamma", DataType::Float},
+        {"u_whiteLevel", DataType::Float},
+        {"u_texelSize", DataType::Vector2Float},
     }, 
 
     // attributes
@@ -70,14 +69,16 @@ R"(
         vec3 color = color4.rgb;
         float alpha = color4.a;
 
-        // tonemapping (extended Reinhard)
+        // "lighting"
         color = color * u_exposure;
+
+        // tonemapping (extended Reinhard)
         vec3 num = color * (1.0f + (color / vec3(u_whiteLevel * u_whiteLevel)));
         vec3 den = (1.0f + color);
         color = num / den;
         
         // gamma correction
-        color = pow(color, vec3(1.0f/u_gamma));  
+        color = pow(color, vec3(1.0/u_gamma));  
        
         outputVal = vec4(color, alpha);
     }  
@@ -157,32 +158,6 @@ const ShaderReplacementRule DOWNSAMPLE_RESOLVE_4 (
     /* textures */ {}
 );
 
-const ShaderReplacementRule INVERSE_TONEMAP (
-    /* rule name */ "INVERSE_TONEMAP",
-    { /* replacement sources */
-      {"FRAG_DECLARATIONS", R"(
-          uniform float u_exposure;
-          uniform float u_whiteLevel;
-          uniform float u_gamma;
-        )"},
-      {"GENERATE_LIT_COLOR", R"(
-          vec3 litColorUngamma = pow(litColor, vec3(u_gamma));
-          float invtonemap_a = -1.f / (u_whiteLevel*u_whiteLevel);
-          vec3 invtonemap_b = (litColorUngamma - 1.f);
-          vec3 invtonemap_c = litColorUngamma;
-          litColor = (-invtonemap_b - sqrt(invtonemap_b * invtonemap_b - 4.f*invtonemap_a*invtonemap_c)) / (2.f * invtonemap_a);
-          litColor = litColor / u_exposure;
-        )"},
-    },
-    /* uniforms */ {
-      {"u_exposure", RenderDataType::Float},
-      {"u_whiteLevel", RenderDataType::Float},
-      {"u_gamma", RenderDataType::Float},
-    },
-    /* attributes */ {},
-    /* textures */ {}
-);
-
 
 const ShaderReplacementRule TRANSPARENCY_RESOLVE_SIMPLE (
     /* rule name */ "TRANSPARENCY_RESOLVE_SIMPLE ",
@@ -209,7 +184,7 @@ const ShaderReplacementRule TRANSPARENCY_STRUCTURE (
         )"},
     },
     /* uniforms */ {
-        {"u_transparency", RenderDataType::Float},
+        {"u_transparency", DataType::Float},
     },
     /* attributes */ {},
     /* textures */ {}
@@ -237,8 +212,8 @@ const ShaderReplacementRule TRANSPARENCY_PEEL_STRUCTURE (
         )"},
     },
     /* uniforms */ {
-        {"u_transparency", RenderDataType::Float},
-        {"u_viewportDim", RenderDataType::Vector2Float},
+        {"u_transparency", DataType::Float},
+        {"u_viewportDim", DataType::Vector2Float},
     },
     /* attributes */ {},
     /* textures */ {

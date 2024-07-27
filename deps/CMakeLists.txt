@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 2.8.9)
+
 if("${POLYSCOPE_BACKEND_OPENGL3_GLFW}")
 
   ## Glad
@@ -19,5 +21,5 @@ add_subdirectory(imgui)
 
 ## Argparse
 
-## Other dependencies
+## STB stuff
 add_subdirectory(stb)

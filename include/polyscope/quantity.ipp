@@ -1,20 +1,14 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 #include "imgui.h"
 
 #include "polyscope/messages.h"
-#include "polyscope/structure.h"
 
 namespace polyscope {
 
-// forward declaration
-void requestRedraw();
-
-// === Structure-specific Quantities
-
 template <typename S>
-QuantityS<S>::QuantityS(std::string name_, S& parentStructure_, bool dominates_)
-    : Quantity(name_, parentStructure_), parent(parentStructure_), dominates(dominates_) {
+Quantity<S>::Quantity(std::string name_, S& parentStructure_, bool dominates_)
+    : parent(parentStructure_), name(name_), enabled(parent.typeName() + "#" + parent.name + "#" + name, false),
+      dominates(dominates_) {
   validateName(name);
 
   // Hack: if the quantity pulls enabled=true from the cache, need to make sure the logic from setEnabled(true) happens,
@@ -26,10 +20,44 @@ QuantityS<S>::QuantityS(std::string name_, S& parentStructure_, bool dominates_)
 }
 
 template <typename S>
-QuantityS<S>::~QuantityS() {}
+Quantity<S>::~Quantity(){};
 
 template <typename S>
-QuantityS<S>* QuantityS<S>::setEnabled(bool newEnabled) {
+void Quantity<S>::draw() {}
+
+template <typename S>
+void Quantity<S>::buildUI() {
+
+  if (ImGui::TreeNode(niceName().c_str())) {
+
+    // Enabled checkbox
+    bool enabledLocal = enabled.get();
+    ImGui::Checkbox("Enabled", &enabledLocal);
+    setEnabled(enabledLocal);
+
+    // Call custom UI
+    this->buildCustomUI();
+
+    ImGui::TreePop();
+  }
+}
+
+template <typename S>
+void Quantity<S>::buildCustomUI() {}
+
+template <typename S>
+void Quantity<S>::buildPickUI(size_t localPickInd) {}
+
+template <typename S>
+bool Quantity<S>::isEnabled() {
+  return enabled.get();
+}
+
+// forward declaration
+void requestRedraw();
+
+template <typename S>
+Quantity<S>* Quantity<S>::setEnabled(bool newEnabled) {
   if (newEnabled == enabled.get()) return this;
 
   enabled = newEnabled;
@@ -51,21 +79,19 @@ QuantityS<S>* QuantityS<S>::setEnabled(bool newEnabled) {
 }
 
 template <typename S>
-void QuantityS<S>::buildUI() {
-  // NOTE: duplicated here and in the FloatingQuantity version
+void Quantity<S>::refresh() {
+  requestRedraw();
+}
 
-  if (ImGui::TreeNode(niceName().c_str())) {
 
-    // Enabled checkbox
-    bool enabledLocal = enabled.get();
-    ImGui::Checkbox("Enabled", &enabledLocal);
-    setEnabled(enabledLocal);
+template <typename S>
+std::string Quantity<S>::niceName() {
+  return name;
+}
 
-    // Call custom UI
-    this->buildCustomUI();
-
-    ImGui::TreePop();
-  }
+template <typename S>
+std::string Quantity<S>::uniquePrefix() {
+  return parent.uniquePrefix() + name + "#";
 }
 
 } // namespace polyscope

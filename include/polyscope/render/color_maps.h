@@ -1,5 +1,4 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 #pragma once
 
 #include <vector>
@@ -31,7 +30,6 @@ bool buildColormapSelector(std::string& cm, std::string fieldname = "##colormap_
 //      - spectral (CM_SPECTRAL)
 //      - rainbow (CM_RAINBOW)
 //      - jet (CM_JET)
-//      - turbo (CM_TURBO)
 //
 //    Cyclic:
 //      - phase (CM_PHASE)

@@ -1,5 +1,7 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 #pragma once
 
-namespace polyscope {} // namespace polyscope
+namespace polyscope {
+
+
+} // namespace polyscope

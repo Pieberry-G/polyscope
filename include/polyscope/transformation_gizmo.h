@@ -1,5 +1,3 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
 #pragma once
 
 #include "polyscope/persistent_value.h"
@@ -47,7 +45,6 @@ protected:
   const float diskWidthObj = 0.1; // in object coordinates, before transformation
   const float vecLength = 1.5;
   const float sphereRad = 0.32;
-  const std::string material = "wax";
 
   // state
   int selectedDim = -1; // must be {0,1,2} if selectedType == Rotation/Translation
@@ -56,9 +53,9 @@ protected:
   glm::vec3 dragPrevVec{1., 0.,
                         0.}; // the normal vector from the previous frame of the drag OR previous translation center
 
-  std::array<glm::vec3, 3> niceRGB = {{glm::vec3{211 / 255., 45 / 255., 62 / 255.},
-                                       glm::vec3{65 / 255., 121 / 255., 225 / 255.},
-                                       glm::vec3{95 / 255., 175 / 255., 35 / 255.}}};
+  std::array<glm::vec3, 3> niceRGB = {glm::vec3{211 / 255., 45 / 255., 62 / 255.},
+                                      glm::vec3{65 / 255., 121 / 255., 225 / 255.},
+                                      glm::vec3{95 / 255., 175 / 255., 35 / 255.}};
 
   void markUpdated();
 

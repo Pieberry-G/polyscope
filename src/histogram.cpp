@@ -1,5 +1,4 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 #include "polyscope/histogram.h"
 
 #include "polyscope/affine_remapper.h"
@@ -9,27 +8,49 @@
 
 #include <algorithm>
 #include <limits>
-#include <stdexcept>
+
+using std::cout;
+using std::endl;
 
 namespace polyscope {
 
-Histogram::Histogram() {}
+// TODO make histograms lazy. There's no need to prepare here rather than on first draw.
 
-Histogram::Histogram(std::vector<double>& values) { buildHistogram(values); }
+Histogram::Histogram() {
+  prepare();
+  fillBuffers();
+}
+
+Histogram::Histogram(std::vector<double>& values) {
+  prepare();
+  buildHistogram(values);
+}
+
+Histogram::Histogram(std::vector<double>& values, const std::vector<double>& weights) {
+  prepare();
+  buildHistogram(values, weights);
+}
 
 Histogram::~Histogram() {}
 
-void Histogram::buildHistogram(const std::vector<double>& values) {
+void Histogram::buildHistogram(std::vector<double>& values, const std::vector<double>& weights) {
 
-  // Build arrays of values
+  hasWeighted = weights.size() > 0;
+  useWeighted = hasWeighted;
+
+  // Build weighed and unweighted arrays of values
   size_t N = values.size();
+  if (weights.size() != 0 && weights.size() != N) {
+    throw std::logic_error("values and weights are not same size");
+  }
 
   // == Build histogram
   dataRange = robustMinMax(values);
   colormapRange = dataRange;
 
   // Helper to build the four histogram variants
-  auto buildCurve = [&](size_t binCount, std::vector<std::array<float, 2>>& curveX, std::vector<float>& curveY) {
+  auto buildCurve = [&](size_t binCount, bool weighted, bool smooth, std::vector<std::array<double, 2>>& curveX,
+                        std::vector<double>& curveY) {
     // linspace coords
     double range = dataRange.second - dataRange.first;
     double inc = range / binCount;
@@ -44,14 +65,18 @@ void Histogram::buildHistogram(const std::vector<double>& values) {
       // NaN values and finite values near the bottom of float range lead to craziness, so only increment bins if we got
       // something reasonable
       if (iBin < binCount) {
-        sumBin[iBin] += 1.0;
+        if (weighted) {
+          sumBin[iBin] += weights[iData];
+        } else {
+          sumBin[iBin] += 1.0;
+        }
       }
     }
 
 
     // build histogram coords
-    curveX = std::vector<std::array<float, 2>>(binCount);
-    curveY = std::vector<float>(binCount);
+    curveX = std::vector<std::array<double, 2>>(binCount);
+    curveY = std::vector<double>(binCount);
     double prevSumU = 0.0;
     double prevSumW = 0.0;
     double prevXEnd = dataRange.first;
@@ -61,7 +86,7 @@ void Histogram::buildHistogram(const std::vector<double>& values) {
 
       // x value
       double xEnd = prevXEnd + inc;
-      curveX[iBin] = {{static_cast<float>(prevXEnd), static_cast<float>(xEnd)}};
+      curveX[iBin] = {{prevXEnd, xEnd}};
       prevXEnd = xEnd;
     }
 
@@ -73,83 +98,155 @@ void Histogram::buildHistogram(const std::vector<double>& values) {
         curveY[i] /= maxHeight;
       }
     }
+
+    if (smooth) {
+      smoothCurve(curveX, curveY);
+
+      { // Rescale again after smoothing
+        double maxHeight = *std::max_element(curveY.begin(), curveY.end());
+        for (size_t i = 0; i < binCount; i++) {
+          curveY[i] /= maxHeight;
+        }
+      }
+    }
   };
 
-  buildCurve(rawHistBinCount, rawHistCurveX, rawHistCurveY);
+  // Build the four variants of the curve
+  buildCurve(rawHistBinCount, false, false, rawHistCurveX, unweightedRawHistCurveY);
+  buildCurve(smoothedHistBinCount, false, true, smoothedHistCurveX, unweightedSmoothedHistCurveY);
+  if (hasWeighted) {
+    buildCurve(rawHistBinCount, true, false, rawHistCurveX, weightedRawHistCurveY);
+    buildCurve(smoothedHistBinCount, true, true, smoothedHistCurveX, weightedSmoothedHistCurveY);
+  }
+
+
+  fillBuffers();
 }
 
+void Histogram::smoothCurve(std::vector<std::array<double, 2>>& xVals, std::vector<double>& yVals) {
+
+  auto smoothFunc = [&](double x1, double x2) {
+    // Tent
+    // double radius = 0.1;
+    // double val = (radius - std::abs(x1 - x2)) / radius;
+    // return std::max(val, 0.0);
+
+    // Gaussian
+    double widthFactor = 1000;
+    double dist = (x1 - x2);
+    return std::exp(-dist * dist * widthFactor);
+
+    // None
+    // if(x1 == x2) return 1.0;
+    // return 0.0;
+  };
+
+  std::vector<double> smoothedVals(yVals.size());
+  for (size_t i = 0; i < yVals.size(); i++) {
+    double bucketCi = 0.5 * (xVals[i][0] + xVals[i][1]);
+    double sum = 0.0;
+    for (size_t j = 0; j < yVals.size(); j++) {
+      double bucketCj = 0.5 * (xVals[j][0] + xVals[j][1]);
+      double weight = smoothFunc(bucketCi, bucketCj);
+      sum += weight * yVals[j];
+    }
+    smoothedVals[i] = sum;
+  }
+
+  yVals = smoothedVals;
+}
 
 void Histogram::updateColormap(const std::string& newColormap) {
   colormap = newColormap;
-  if (program) {
-    program.reset();
-  }
+  fillBuffers();
 }
 
 void Histogram::fillBuffers() {
 
-  if (rawHistCurveY.size() == 0) {
-    exception("histogram fillBuffers() called before buildHistogram");
+  // Fill from proper curve depending on current settings
+  // (does unecessary copy as written)
+  std::vector<double> histCurveY;
+  std::vector<std::array<double, 2>> histCurveX;
+  bool smoothBins = false; // draw trapezoids rather than rectangles
+  if (useSmoothed) {
+    if (useWeighted) {
+      histCurveY = weightedSmoothedHistCurveY;
+    } else {
+      histCurveY = unweightedSmoothedHistCurveY;
+    }
+    histCurveX = smoothedHistCurveX;
+    smoothBins = true;
+  } else {
+    if (useWeighted) {
+      histCurveY = weightedRawHistCurveY;
+    } else {
+      histCurveY = unweightedRawHistCurveY;
+    }
+    histCurveX = rawHistCurveX;
   }
 
   // Push to buffer
   std::vector<glm::vec2> coords;
 
-  float histHeightStart = bottomBarHeight + bottomBarGap;
-
-  for (size_t i = 0; i < rawHistCurveX.size(); i++) {
-
-    float leftX = rawHistCurveX[i][0];
-    float rightX = rawHistCurveX[i][1];
-
-    float leftYTop = histHeightStart + (1. - histHeightStart) * rawHistCurveY[i];
-    float rightYTop = histHeightStart + (1. - histHeightStart) * rawHistCurveY[i];
-
-    float leftYBot = histHeightStart;
-    float rightYBot = histHeightStart;
-
-    // = Lower triangle (lower left, lower right, upper left)
-    coords.push_back(glm::vec2{leftX, leftYBot});
-    coords.push_back(glm::vec2{rightX, rightYBot});
-    coords.push_back(glm::vec2{leftX, leftYTop});
-
-    // = Upper triangle (lower right, upper right, upper left)
-    coords.push_back(glm::vec2{rightX, rightYBot});
-    coords.push_back(glm::vec2{rightX, rightYTop});
-    coords.push_back(glm::vec2{leftX, leftYTop});
+  if (histCurveY.size() == 0) {
+    program->setAttribute("a_coord", coords);
+    return;
   }
 
-  // the long skinny bar along the bottom, which always shows regardless of histogram values
-  coords.push_back(glm::vec2{0., 0.});
-  coords.push_back(glm::vec2{1., 0.});
-  coords.push_back(glm::vec2{0., bottomBarHeight});
-  coords.push_back(glm::vec2{1., 0.});
-  coords.push_back(glm::vec2{1., bottomBarHeight});
-  coords.push_back(glm::vec2{0., bottomBarHeight});
+  // Extra first triangle
+  for (size_t i = 0; i < histCurveX.size(); i++) {
 
+    double leftX = histCurveX[i][0];
+    double rightX = histCurveX[i][1];
+
+    double leftY = histCurveY[i];
+    double rightY = histCurveY[i];
+    if (smoothBins) {
+      if (i > 0) {
+        leftY = 0.5 * (histCurveY[i - 1] + histCurveY[i]);
+      }
+      if (i < histCurveX.size() - 1) {
+        rightY = 0.5 * (histCurveY[i] + histCurveY[i + 1]);
+      }
+    }
+
+    // = Lower triangle (lower left, lower right, upper left)
+    coords.push_back(glm::vec2{leftX, 0.0});
+    coords.push_back(glm::vec2{rightX, 0.0});
+    coords.push_back(glm::vec2{leftX, leftY});
+
+    // = Upper triangle (lower right, upper right, upper left)
+    coords.push_back(glm::vec2{rightX, 0.0});
+    coords.push_back(glm::vec2{rightX, rightY});
+    coords.push_back(glm::vec2{leftX, leftY});
+  }
 
   program->setAttribute("a_coord", coords);
+  program->setTextureFromColormap("t_colormap", colormap, true);
+
+  // Update current buffer settings
+  currBufferWeighted = useWeighted;
+  currBufferSmoothed = useSmoothed;
 }
 
 void Histogram::prepare() {
 
   framebuffer = render::engine->generateFrameBuffer(texDim, texDim);
-  texture = render::engine->generateTextureBuffer(TextureFormat::RGBA8, texDim, texDim);
-  framebuffer->addColorBuffer(texture);
+  texturebuffer = render::engine->generateTextureBuffer(TextureFormat::RGBA8, texDim, texDim);
+  framebuffer->addColorBuffer(texturebuffer);
 
   // Create the program
   program = render::engine->requestShader("HISTOGRAM", {}, render::ShaderReplacementDefaults::Process);
 
-  program->setTextureFromColormap("t_colormap", colormap, true);
-
-  fillBuffers();
+  prepared = true;
 }
 
 
 void Histogram::renderToTexture() {
 
-  if (!program) {
-    prepare();
+  // Refill buffer if needed
+  if (currBufferWeighted != useWeighted || currBufferSmoothed != useSmoothed) {
+    fillBuffers();
   }
 
   framebuffer->clearColor = {0.0, 0.0, 0.0};
@@ -171,28 +268,22 @@ void Histogram::renderToTexture() {
 
 
 void Histogram::buildUI(float width) {
-
-  // NOTE: I'm surprised this works, since we're drawing in the middle of imgui's processing. Possible source of bugs?
   renderToTexture();
 
   // Compute size for image
-  float aspect = 4.0;
+  float aspect = 3.0;
   float w = width;
   if (w == -1.0) {
-    w = .7 * ImGui::GetWindowWidth();
+    w = .8 * ImGui::GetWindowWidth();
   }
   float h = w / aspect;
 
   // Render image
-  ImGui::Image(texture->getNativeHandle(), ImVec2(w, h), ImVec2(0, 1), ImVec2(1, 0));
-
-  // Helpful info for drawing annotations below
-  ImU32 annoColor = ImGui::ColorConvertFloat4ToU32(ImVec4(254 / 255., 221 / 255., 66 / 255., 1.0));
-  ImU32 annoColorDark = ImGui::ColorConvertFloat4ToU32(ImVec4(5. / 255., 5. / 255., 5. / 255., 1.0));
-  ImVec2 imageLowerLeft(ImGui::GetCursorScreenPos().x, ImGui::GetCursorScreenPos().y);
+  ImGui::Image(texturebuffer->getNativeHandle(), ImVec2(w, h), ImVec2(0, 1), ImVec2(1, 0));
 
   // Draw a cursor popup on mouseover
   if (ImGui::IsItemHovered()) {
+
     // Get mouse x coodinate within image
     float mouseX = ImGui::GetMousePos().x - ImGui::GetCursorScreenPos().x - ImGui::GetScrollX();
     double mouseT = mouseX / w;
@@ -201,61 +292,21 @@ void Histogram::buildUI(float width) {
     ImGui::SetTooltip("%g", val);
 
     // Draw line
-    ImVec2 lineStart(imageLowerLeft.x + mouseX, imageLowerLeft.y - h - 3);
-    ImVec2 lineEnd(imageLowerLeft.x + mouseX, imageLowerLeft.y - 4);
-    ImGui::GetWindowDrawList()->AddLine(lineStart, lineEnd, annoColor);
+    ImVec2 imageUpperLeft(ImGui::GetCursorScreenPos().x, ImGui::GetCursorScreenPos().y);
+    ImVec2 lineStart(imageUpperLeft.x + mouseX, imageUpperLeft.y - h - 3);
+    ImVec2 lineEnd(imageUpperLeft.x + mouseX, imageUpperLeft.y - 4);
+    ImGui::GetWindowDrawList()->AddLine(lineStart, lineEnd,
+                                        ImGui::ColorConvertFloat4ToU32(ImVec4(254 / 255., 221 / 255., 66 / 255., 1.0)));
   }
 
-
-  /* This is pretty neat, but ultimately I decided I don't like the look of it. It has
-   * some value as a more obvious user widget than dragging imgui's sliders, however.
-
-  { // Draw triangles that indicate where the colormap is
-
-    // clang-format off
-
-    float markerTriWidth = 0.05;
-    float imageLeft = imageLowerLeft.x;
-    float imageRight = imageLeft + w;
-    float imageTop = imageLowerLeft.y - 4;
-    float imageBot = imageTop + h;
-
-    float leftX = (colormapRange.first - dataRange.first) / (dataRange.second - dataRange.first);
-    float rightX = (colormapRange.second - dataRange.first) / (dataRange.second - dataRange.first);
-    float markerTriHeight = bottomBarHeight / 2;
-
-    // left triangle
-    ImGui::GetWindowDrawList()->AddTriangleFilled(
-        {imageLeft + w*(leftX - markerTriWidth) , imageTop},
-        {imageLeft + w*(leftX + markerTriWidth) , imageTop},
-        {imageLeft + w*leftX                    , imageTop - h*markerTriHeight},
-        annoColor
-      );
-    ImGui::GetWindowDrawList()->AddTriangle(
-        {imageLeft + w*(leftX - markerTriWidth) , imageTop},
-        {imageLeft + w*(leftX + markerTriWidth) , imageTop},
-        {imageLeft + w*leftX                    , imageTop - h*markerTriHeight},
-        annoColorDark
-      );
-
-    // right triangle
-    ImGui::GetWindowDrawList()->AddTriangleFilled(
-        {imageLeft + w*(rightX - markerTriWidth) , imageTop},
-        {imageLeft + w*(rightX + markerTriWidth) , imageTop},
-        {imageLeft + w*rightX                    , imageTop - h*markerTriHeight},
-        annoColor
-      );
-    ImGui::GetWindowDrawList()->AddTriangle(
-        {imageLeft + w*(rightX - markerTriWidth) , imageTop},
-        {imageLeft + w*(rightX + markerTriWidth) , imageTop},
-        {imageLeft + w*rightX                    , imageTop - h*markerTriHeight},
-        annoColorDark
-      );
-
-    // clang-format on
+  // Right-click combobox to select weighted/unweighted
+  if (ImGui::BeginPopupContextItem("select type")) {
+    if (hasWeighted) {
+      ImGui::Checkbox("Weighted", &useWeighted);
+    }
+    ImGui::Checkbox("Smoothed", &useSmoothed);
+    ImGui::EndPopup();
   }
-
-  */
 }
 
 

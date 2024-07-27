@@ -1,13 +1,12 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 #pragma once
 
 #include "polyscope/affine_remapper.h"
 #include "polyscope/histogram.h"
-#include "polyscope/parameterization_quantity.h"
 #include "polyscope/render/color_maps.h"
 #include "polyscope/render/engine.h"
 #include "polyscope/surface_mesh.h"
+#include "polyscope/surface_parameterization_enums.h"
 
 
 namespace polyscope {
@@ -18,24 +17,61 @@ namespace polyscope {
 // ==============================================================
 
 
-class SurfaceParameterizationQuantity : public SurfaceMeshQuantity,
-                                        public ParameterizationQuantity<SurfaceParameterizationQuantity> {
+class SurfaceParameterizationQuantity : public SurfaceMeshQuantity {
 
 public:
-  SurfaceParameterizationQuantity(std::string name, SurfaceMesh& mesh_, const std::vector<glm::vec2>& coords_,
-                                  ParamCoordsType type_, ParamVizStyle style_);
+  SurfaceParameterizationQuantity(std::string name, ParamCoordsType type_, ParamVizStyle style, SurfaceMesh& mesh_);
 
-  virtual void draw() override;
-  virtual void refresh() override;
+  void draw() override;
   virtual void buildCustomUI() override;
 
+  virtual void refresh() override;
+
+
+  // === Members
+  const ParamCoordsType coordsType;
+
+  // === Viz stuff
+  // to keep things simple, has settings for all of the viz styles, even though not all are used at all times
+
+
+  // === Getters and setters for visualization options
+
+  // What visualization scheme to use
+  SurfaceParameterizationQuantity* setStyle(ParamVizStyle newStyle);
+  ParamVizStyle getStyle();
+
+  // Colors for checkers
+  SurfaceParameterizationQuantity* setCheckerColors(std::pair<glm::vec3, glm::vec3> colors);
+  std::pair<glm::vec3, glm::vec3> getCheckerColors();
+
+  // Colors for checkers
+  SurfaceParameterizationQuantity* setGridColors(std::pair<glm::vec3, glm::vec3> colors);
+  std::pair<glm::vec3, glm::vec3> getGridColors();
+
+  // The size of checkers / stripes
+  SurfaceParameterizationQuantity* setCheckerSize(double newVal);
+  double getCheckerSize();
+
+  // Color map for radial visualization
+  SurfaceParameterizationQuantity* setColorMap(std::string val);
+  std::string getColorMap();
 
 protected:
+  // === Visualiztion options
+  PersistentValue<float> checkerSize;
+  PersistentValue<ParamVizStyle> vizStyle;
+  PersistentValue<glm::vec3> checkColor1, checkColor2;           // for checker (two colors to use)
+  PersistentValue<glm::vec3> gridLineColor, gridBackgroundColor; // for GRID (two colors to use)
+
+  PersistentValue<std::string> cMap;
+  float localRot = 0.; // for LOCAL (angular shift, in radians)
   std::shared_ptr<render::ShaderProgram> program;
 
   // Helpers
   void createProgram();
-  virtual void fillCoordBuffers(render::ShaderProgram& p) = 0;
+  void setProgramUniforms(render::ShaderProgram& program);
+  virtual void fillColorBuffers(render::ShaderProgram& p) = 0;
 };
 
 
@@ -46,14 +82,17 @@ protected:
 class SurfaceCornerParameterizationQuantity : public SurfaceParameterizationQuantity {
 
 public:
-  SurfaceCornerParameterizationQuantity(std::string name, SurfaceMesh& mesh_, const std::vector<glm::vec2>& coords_,
-                                        ParamCoordsType type_, ParamVizStyle style);
+  SurfaceCornerParameterizationQuantity(std::string name, std::vector<glm::vec2> values_, ParamCoordsType type_,
+                                        ParamVizStyle style, SurfaceMesh& mesh_);
 
-  virtual void buildCornerInfoGUI(size_t cInd) override;
+  virtual void buildHalfedgeInfoGUI(size_t heInd) override;
   virtual std::string niceName() override;
 
+  // === Members
+  std::vector<glm::vec2> coords; // on corners
+
 protected:
-  virtual void fillCoordBuffers(render::ShaderProgram& p) override;
+  virtual void fillColorBuffers(render::ShaderProgram& p) override;
 };
 
 
@@ -63,15 +102,17 @@ protected:
 
 class SurfaceVertexParameterizationQuantity : public SurfaceParameterizationQuantity {
 public:
-  SurfaceVertexParameterizationQuantity(std::string name, SurfaceMesh& mesh_, const std::vector<glm::vec2>& coords_,
-                                        ParamCoordsType type_, ParamVizStyle style);
+  SurfaceVertexParameterizationQuantity(std::string name, std::vector<glm::vec2> values_, ParamCoordsType type_,
+                                        ParamVizStyle style, SurfaceMesh& mesh_);
 
   virtual void buildVertexInfoGUI(size_t vInd) override;
   virtual std::string niceName() override;
 
+  // === Members
+  std::vector<glm::vec2> coords; // on vertices
 
 protected:
-  virtual void fillCoordBuffers(render::ShaderProgram& p) override;
+  virtual void fillColorBuffers(render::ShaderProgram& p) override;
 };
 
 } // namespace polyscope

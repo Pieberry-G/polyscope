@@ -1,5 +1,4 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 #pragma once
 
 #include "polyscope/affine_remapper.h"
@@ -26,9 +25,11 @@ public:
 
   virtual std::string niceName() override;
 
-protected:
-  void createProgram();
 
+protected:
+  // === Visualization parameters
+
+  void createPointProgram();
   std::shared_ptr<render::ShaderProgram> pointProgram;
 };
 

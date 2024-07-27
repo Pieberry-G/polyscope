@@ -1,5 +1,4 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 
 #include "polyscope/render/opengl/shaders/ribbon_shaders.h"
 
@@ -17,9 +16,9 @@ const ShaderStageSpecification RIBBON_VERT_SHADER = {
 
     // attributes
     {
-        {"a_position", RenderDataType::Vector3Float},
-        {"a_color", RenderDataType::Vector3Float},
-        {"a_normal", RenderDataType::Vector3Float},
+        {"a_position", DataType::Vector3Float},
+        {"a_color", DataType::Vector3Float},
+        {"a_normal", DataType::Vector3Float},
     },
     
     {}, // textures
@@ -49,10 +48,10 @@ const ShaderStageSpecification RIBBON_GEOM_SHADER = {
     
     // uniforms
     {
-        {"u_modelView", RenderDataType::Matrix44Float},
-        {"u_projMatrix", RenderDataType::Matrix44Float},
-        {"u_ribbonWidth", RenderDataType::Float},
-        {"u_depthOffset", RenderDataType::Float},
+        {"u_modelView", DataType::Matrix44Float},
+        {"u_projMatrix", DataType::Matrix44Float},
+        {"u_ribbonWidth", DataType::Float},
+        {"u_depthOffset", DataType::Float},
     }, 
 
     // attributes

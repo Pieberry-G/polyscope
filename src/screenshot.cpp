@@ -1,5 +1,4 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 #include "polyscope/screenshot.h"
 
 #include "polyscope/polyscope.h"
@@ -75,7 +74,7 @@ void screenshot(std::string filename, bool transparentBG) {
   bool requestedAlready = redrawRequested();
   requestRedraw();
 
-  draw(false, false);
+  draw(false);
 
   if (requestedAlready) {
     requestRedraw();

@@ -1,5 +1,4 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 #pragma once
 
 #include "polyscope/affine_remapper.h"
@@ -8,7 +7,6 @@
 #include "polyscope/point_cloud_quantity.h"
 #include "polyscope/polyscope.h"
 #include "polyscope/render/engine.h"
-#include "polyscope/render/managed_buffer.h"
 #include "polyscope/scaled_value.h"
 #include "polyscope/standardize_data_array.h"
 #include "polyscope/structure.h"
@@ -53,14 +51,11 @@ public:
 
   // Standard structure overrides
   virtual void draw() override;
-  virtual void drawDelayed() override;
   virtual void drawPick() override;
-  virtual void updateObjectSpaceBounds() override;
+  virtual double lengthScale() override;
+  virtual std::tuple<glm::vec3, glm::vec3> boundingBox() override;
   virtual std::string typeName() override;
   virtual void refresh() override;
-
-  // === Geometry members
-  render::ManagedBuffer<glm::vec3> points;
 
   // === Quantities
 
@@ -97,17 +92,14 @@ public:
   // === Set point size from a scalar quantity
   // effect is multiplicative with pointRadius
   // negative values are always clamped to 0
-  // if autoScale==true, values are rescaled such that the largest has size 1
+  // if autoScale==true, values are rescaled such that the largest has size pointRadius
   void setPointRadiusQuantity(PointCloudScalarQuantity* quantity, bool autoScale = true);
   void setPointRadiusQuantity(std::string name, bool autoScale = true);
   void clearPointRadiusQuantity();
 
   // The points that make up this point cloud
-  // Normally, the values are stored here. But if the render buffer
-  // is being manually updated, they will live only in the render buffer
-  // and this will be empty.
-  size_t nPoints();
-  glm::vec3 getPointPosition(size_t iPt);
+  std::vector<glm::vec3> points;
+  size_t nPoints() const { return points.size(); }
 
   // Misc data
   static const std::string structureTypeName;
@@ -116,10 +108,6 @@ public:
   void deleteProgram();
 
   // === Get/set visualization parameters
-
-  // set the base color of the points
-  PointCloud* setPointRenderMode(PointRenderMode newVal);
-  PointRenderMode getPointRenderMode();
 
   // set the base color of the points
   PointCloud* setPointColor(glm::vec3 newVal);
@@ -135,19 +123,11 @@ public:
 
   // Rendering helpers used by quantities
   void setPointCloudUniforms(render::ShaderProgram& p);
-  void setPointProgramGeometryAttributes(render::ShaderProgram& p);
-  std::vector<std::string> addPointCloudRules(std::vector<std::string> initRules, bool withPointCloud = true);
-  std::string getShaderNameForRenderMode();
-
-  // === ~DANGER~ experimental/unsupported functions
-
+  std::vector<std::string> addStructureRules(std::vector<std::string> initRules);
+  void fillGeometryBuffers(render::ShaderProgram& p);
 
 private:
-  // Storage for the managed buffers above. You should generally interact with this directly through them.
-  std::vector<glm::vec3> pointsData;
-
   // === Visualization parameters
-  PersistentValue<std::string> pointRenderMode;
   PersistentValue<glm::vec3> pointColor;
   PersistentValue<ScaledValue<float>> pointRadius;
   PersistentValue<std::string> material;
@@ -159,8 +139,10 @@ private:
 
   // === Helpers
   // Do setup work related to drawing, including allocating openGL data
-  void ensureRenderProgramPrepared();
-  void ensurePickProgramPrepared();
+  void prepare();
+  void preparePick();
+  void geometryChanged();
+
 
   // === Quantity adder implementations
   PointCloudScalarQuantity* addScalarQuantityImpl(std::string name, const std::vector<double>& data, DataType type);
@@ -176,7 +158,7 @@ private:
   // which (scalar) quantity to set point size from
   std::string pointRadiusQuantityName = ""; // empty string means none
   bool pointRadiusQuantityAutoscale = true;
-  PointCloudScalarQuantity& resolvePointRadiusQuantity(); // helper
+  std::vector<double> resolvePointRadiusQuantity(); // helper
 };
 
 
@@ -189,7 +171,7 @@ PointCloud* registerPointCloud2D(std::string name, const T& points);
 // Shorthand to get a point cloud from polyscope
 inline PointCloud* getPointCloud(std::string name = "");
 inline bool hasPointCloud(std::string name = "");
-inline void removePointCloud(std::string name = "", bool errorIfAbsent = false);
+inline void removePointCloud(std::string name = "", bool errorIfAbsent = true);
 
 
 } // namespace polyscope

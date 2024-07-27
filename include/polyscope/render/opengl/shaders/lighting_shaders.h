@@ -1,5 +1,3 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
 #pragma once
 
 #include "polyscope/render/opengl/gl_shaders.h"
@@ -16,8 +14,6 @@ extern const ShaderReplacementRule DOWNSAMPLE_RESOLVE_1;
 extern const ShaderReplacementRule DOWNSAMPLE_RESOLVE_2;
 extern const ShaderReplacementRule DOWNSAMPLE_RESOLVE_3;
 extern const ShaderReplacementRule DOWNSAMPLE_RESOLVE_4;
-
-extern const ShaderReplacementRule INVERSE_TONEMAP;
 
 extern const ShaderReplacementRule TRANSPARENCY_RESOLVE_SIMPLE;
 extern const ShaderReplacementRule TRANSPARENCY_STRUCTURE;

@@ -1,5 +1,3 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
 #pragma once
 
 #include "polyscope/render/engine.h"
@@ -27,17 +25,9 @@ extern const ShaderReplacementRule SHADE_CHECKER_VALUE2;        // generate a tw
 extern const ShaderReplacementRule SHADEVALUE_MAG_VALUE2;       // generate a shadeValue from the magnitude of shadeValue2
 extern const ShaderReplacementRule ISOLINE_STRIPE_VALUECOLOR;   // modulate albedoColor based on shadeValue
 extern const ShaderReplacementRule CHECKER_VALUE2COLOR;         // modulate albedoColor based on shadeValue2
-extern const ShaderReplacementRule SHADE_BASECOLOR;             // constant from u_baseColor
-
-// Positions, culling, etc
-extern const ShaderReplacementRule GENERATE_VIEW_POS;          // computes viewPos, position in viewspace for fragment
-extern const ShaderReplacementRule CULL_POS_FROM_VIEW;
-
-ShaderReplacementRule generateSlicePlaneRule(std::string uniquePostfix);
-ShaderReplacementRule generateVolumeGridSlicePlaneRule(std::string uniquePostfix);
 
 // clang-format on
 
-} // namespace backend_openGL3_glfw
+}
 } // namespace render
 } // namespace polyscope

@@ -1,5 +1,4 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 #pragma once
 
 #include "polyscope/structure.h"
@@ -21,6 +20,8 @@ size_t requestPickBufferRange(Structure* requestingStructure, size_t count);
 // Get the structure which was clicked on (nullptr if none), and the pick ID in local indices for that structure (such
 // that 0 is the first index as returned from requestPickBufferRange())
 std::pair<Structure*, size_t> evaluatePickQuery(int xPos, int yPos);
+void updatePosFramebuffer();
+glm::vec4 pickPosQuery(int xPos, int yPos);
 
 
 // == Stateful picking: track and update a current selection

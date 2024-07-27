@@ -1,5 +1,4 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 
 #include "polyscope/render/opengl/shaders/vector_shaders.h"
 
@@ -15,13 +14,13 @@ const ShaderStageSpecification FLEX_VECTOR_VERT_SHADER = {
 
     // uniforms
     {
-        {"u_modelView", RenderDataType::Matrix44Float},
+        {"u_modelView", DataType::Matrix44Float},
     }, 
 
     // attributes
     {
-        {"a_position", RenderDataType::Vector3Float},
-        {"a_vector", RenderDataType::Vector3Float},
+        {"a_position", DataType::Vector3Float},
+        {"a_vector", DataType::Vector3Float},
     },
 
     {}, // textures
@@ -48,70 +47,15 @@ R"(
 )"
 };
 
-const ShaderStageSpecification FLEX_TANGENT_VECTOR_VERT_SHADER = {
-
-    ShaderStageType::Vertex,
-
-    // uniforms
-    {
-        {"u_modelView", RenderDataType::Matrix44Float},
-        {"u_vectorRotRad", RenderDataType::Float},
-    }, 
-
-    // attributes
-    {
-        {"a_position", RenderDataType::Vector3Float},
-        {"a_tangentVector", RenderDataType::Vector2Float},
-        {"a_basisVectorX", RenderDataType::Vector3Float},
-        {"a_basisVectorY", RenderDataType::Vector3Float},
-    },
-
-    {}, // textures
-
-    // source
-R"(
-        ${ GLSL_VERSION }$
-
-        in vec3 a_position;
-        in vec2 a_tangentVector;
-        in vec3 a_basisVectorX;
-        in vec3 a_basisVectorY;
-        uniform mat4 u_modelView;
-        uniform float u_vectorRotRad;
-        out vec4 vector;
-        
-        ${ VERT_DECLARATIONS }$
-        
-
-        void main()
-        {
-            gl_Position = u_modelView * vec4(a_position,1.0);
-          
-            vec2 rotTangentVector = a_tangentVector;
-            if(u_vectorRotRad != 0.) {
-              float cR = cos(u_vectorRotRad);
-              float sR = sin(u_vectorRotRad);
-              mat2 rotMat = mat2(cR, sR, -sR, cR);
-              rotTangentVector = rotMat * rotTangentVector;
-            }
-
-            vec3 worldVector = rotTangentVector.x * a_basisVectorX + rotTangentVector.y * a_basisVectorY;
-            vector = u_modelView * vec4(worldVector, .0);
-            
-            ${ VERT_ASSIGNMENTS }$
-        }
-)"
-};
-
 const ShaderStageSpecification FLEX_VECTOR_GEOM_SHADER = {
     
     ShaderStageType::Geometry,
     
     // uniforms
     {
-        {"u_projMatrix", RenderDataType::Matrix44Float},
-        {"u_lengthMult", RenderDataType::Float},
-        {"u_radius", RenderDataType::Float},
+        {"u_projMatrix", DataType::Matrix44Float},
+        {"u_lengthMult", DataType::Float},
+        {"u_radius", DataType::Float},
     }, 
 
     // attributes
@@ -193,10 +137,10 @@ const ShaderStageSpecification FLEX_VECTOR_FRAG_SHADER = {
     
     // uniforms
     {
-        {"u_projMatrix", RenderDataType::Matrix44Float},
-        {"u_invProjMatrix", RenderDataType::Matrix44Float},
-        {"u_viewport", RenderDataType::Vector4Float},
-        {"u_radius", RenderDataType::Float},
+        {"u_projMatrix", DataType::Matrix44Float},
+        {"u_invProjMatrix", DataType::Matrix44Float},
+        {"u_viewport", DataType::Vector4Float},
+        {"u_radius", DataType::Float},
     }, 
 
     { }, // attributes
@@ -240,8 +184,7 @@ R"(
            vec3 pHit = vec3(777,777,777);
            vec3 nHit =  vec3(777,777,777);
            vec3 cylEnd = tailView + (1. - tipLengthFrac) * (tipView - tailView);
-           float cylRad = tipWidthFrac * adjRadius;
-           rayCylinderIntersection(vec3(0., 0., 0), viewRay, tailView, cylEnd, cylRad, tHit, pHit, nHit);
+           rayCylinderIntersection(vec3(0., 0., 0), viewRay, tailView, cylEnd, tipWidthFrac * adjRadius, tHit, pHit, nHit);
            
            // Raycast to cone
            float tHitCone;
@@ -259,7 +202,6 @@ R"(
            }
            float depth = fragDepthFromView(u_projMatrix, depthRange, pHit);
            
-           ${ GLOBAL_FRAGMENT_FILTER_PREP }$
            ${ GLOBAL_FRAGMENT_FILTER }$
 
            // Set depth (expensive!)
@@ -312,20 +254,8 @@ const ShaderReplacementRule VECTOR_PROPAGATE_COLOR (
     },
     /* uniforms */ {},
     /* attributes */ {
-      {"a_color", RenderDataType::Vector3Float},
+      {"a_color", DataType::Vector3Float},
     },
-    /* textures */ {}
-);
-
-const ShaderReplacementRule VECTOR_CULLPOS_FROM_TAIL(
-    /* rule name */ "VECTOR_CULLPOS_FROM_TAIL",
-    { /* replacement sources */
-      {"GLOBAL_FRAGMENT_FILTER_PREP", R"(
-          vec3 cullPos = tailView;
-        )"},
-    },
-    /* uniforms */ {},
-    /* attributes */ {},
     /* textures */ {}
 );
 

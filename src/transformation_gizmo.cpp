@@ -1,5 +1,3 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
 #include "polyscope/transformation_gizmo.h"
 
 #include "polyscope/polyscope.h"
@@ -25,11 +23,8 @@ void TransformationGizmo::markUpdated() {
 void TransformationGizmo::prepare() {
 
   { // The rotation rings, drawn via textured quads
-    // clang-format off
-    ringProgram = render::engine->requestShader("TRANSFORMATION_GIZMO_ROT", 
-        {}, 
-      render::ShaderReplacementDefaults::Process);
-    // clang-format on
+    ringProgram =
+        render::engine->requestShader("TRANSFORMATION_GIZMO_ROT", {}, render::ShaderReplacementDefaults::Process);
 
     std::vector<glm::vec3> coords;
     std::vector<glm::vec3> normals;
@@ -43,20 +38,13 @@ void TransformationGizmo::prepare() {
     ringProgram->setAttribute("a_color", colors);
     ringProgram->setAttribute("a_texcoord", texcoords);
     ringProgram->setAttribute("a_component", components);
+
+    // render::engine->setMaterial(*ringProgram, "wax");
   }
 
   { // Translation arrows
-    // clang-format off
-    arrowProgram = render::engine->requestShader("RAYCAST_VECTOR",       
-      render::engine->addMaterialRules(material,
-        {
-          "VECTOR_PROPAGATE_COLOR", 
-          "TRANSFORMATION_GIZMO_VEC", 
-          "SHADE_COLOR", 
-        }
-      ),
-      render::ShaderReplacementDefaults::Process);
-    // clang-format on
+    arrowProgram = render::engine->requestShader("RAYCAST_VECTOR",
+                                                 {"VECTOR_PROPAGATE_COLOR", "TRANSFORMATION_GIZMO_VEC", "SHADE_COLOR"});
 
     std::vector<glm::vec3> vectors;
     std::vector<glm::vec3> bases;
@@ -69,22 +57,12 @@ void TransformationGizmo::prepare() {
     arrowProgram->setAttribute("a_color", colors);
     arrowProgram->setAttribute("a_component", components);
 
-    render::engine->setMaterial(*arrowProgram, material);
+    render::engine->setMaterial(*arrowProgram, "wax");
   }
 
   { // Scale sphere
-    // clang-format off
-    sphereProgram = render::engine->requestShader("RAYCAST_SPHERE", 
-        render::engine->addMaterialRules(material,
-          {
-            "SHADE_BASECOLOR", 
-            "LIGHT_MATCAP"
-          }
-        ),
-      render::ShaderReplacementDefaults::Process);
-    // clang-format on
-
-    render::engine->setMaterial(*sphereProgram, material);
+    sphereProgram = render::engine->requestShader("RAYCAST_SPHERE", {"SHADE_BASECOLOR"});
+    render::engine->setMaterial(*sphereProgram, "wax");
 
     std::vector<glm::vec3> center = {glm::vec3(0., 0., 0.)};
     sphereProgram->setAttribute("a_position", center);
@@ -113,10 +91,6 @@ void TransformationGizmo::draw() {
   sphereProgram->setUniform("u_projMatrix", glm::value_ptr(projMat));
 
   ringProgram->setUniform("u_diskWidthRel", diskWidthObj);
-
-
-  render::engine->setMaterialUniforms(*arrowProgram, material);
-  render::engine->setMaterialUniforms(*sphereProgram, material);
 
   // set selections
   glm::vec3 selectRot{0., 0., 0.};
@@ -181,7 +155,7 @@ bool TransformationGizmo::interact() {
   glm::vec3 nX(T * glm::vec4{1., 0., 0., 0.});
   glm::vec3 nY(T * glm::vec4{0., 1., 0., 0.});
   glm::vec3 nZ(T * glm::vec4{0., 0., 1., 0.});
-  std::array<glm::vec3, 3> axNormals{glm::normalize(nX), glm::normalize(nY), glm::normalize(nZ)};
+  std::array<glm::vec3, 3> axNormals{nX, nY, nZ};
 
   float transScale = glm::length(glm::vec3(T[0]));
   float gizmoSize = transScale * gizmoSizeRel * state::lengthScale;
@@ -335,6 +309,7 @@ bool TransformationGizmo::interact() {
     // clear selection before proceeding
     selectedType = TransformHandle::None;
     selectedDim = -1;
+    bool dragStarted = false;
 
     if (hitType == TransformHandle::Rotation && hitDist < diskWidth) {
       // rotation is hovered
@@ -346,6 +321,7 @@ bool TransformationGizmo::interact() {
       // if the mouse is clicked, start a drag
       if (ImGui::IsMouseClicked(0) && !io.WantCaptureMouse) {
         currentlyDragging = true;
+        dragStarted = true;
 
         glm::vec3 nearestDir = glm::normalize(hitNearest - center);
         dragPrevVec = nearestDir;
@@ -360,6 +336,7 @@ bool TransformationGizmo::interact() {
       // if the mouse is clicked, start a drag
       if (ImGui::IsMouseClicked(0) && !io.WantCaptureMouse) {
         currentlyDragging = true;
+        dragStarted = true;
 
         dragPrevVec = hitNearest;
       }
@@ -373,6 +350,7 @@ bool TransformationGizmo::interact() {
       // if the mouse is clicked, start a drag
       if (ImGui::IsMouseClicked(0) && !io.WantCaptureMouse) {
         currentlyDragging = true;
+        dragStarted = true;
 
         dragPrevVec = hitNearest;
       }
@@ -385,16 +363,13 @@ bool TransformationGizmo::interact() {
 std::tuple<float, float, glm::vec3> TransformationGizmo::circleTest(glm::vec3 raySource, glm::vec3 rayDir,
                                                                     glm::vec3 center, glm::vec3 normal, float radius) {
 
-  // used for explicit constructors below to make old compilers (gcc-5) happy
-  typedef std::tuple<float, float, glm::vec3> ret_t;
 
   // Intersect the ray with the plane defined by the normal
   float div = glm::dot(normal, rayDir);
-  if (std::fabs(div) < 1e-6)
-    return ret_t{-1, std::numeric_limits<float>::infinity(), glm::vec3{0., 0., 0.}}; // parallel
+  if (std::fabs(div) < 1e-6) return {-1, std::numeric_limits<float>::infinity(), glm::vec3{0., 0., 0.}}; // parallel
 
   float tRay = glm::dot((center - raySource), normal) / div;
-  if (tRay < 0) return ret_t{-1, std::numeric_limits<float>::infinity(), glm::vec3{0., 0., 0.}}; // behind the ray
+  if (tRay < 0) return {-1, std::numeric_limits<float>::infinity(), glm::vec3{0., 0., 0.}}; // behind the ray
 
   glm::vec3 hitPoint = raySource + tRay * rayDir;
 
@@ -403,18 +378,16 @@ std::tuple<float, float, glm::vec3> TransformationGizmo::circleTest(glm::vec3 ra
   float ringDist = std::fabs(hitRad - radius);
   glm::vec3 nearestPoint = center + (hitPoint - center) / hitRad * radius;
 
-  return ret_t{tRay, ringDist, nearestPoint};
+  return {tRay, ringDist, nearestPoint};
 }
 
 std::tuple<float, float, glm::vec3> TransformationGizmo::lineTest(glm::vec3 raySource, glm::vec3 rayDir,
                                                                   glm::vec3 center, glm::vec3 tangent, float length) {
 
-  // used for explicit constructors below to make old compilers (gcc-5) happy
-  typedef std::tuple<float, float, glm::vec3> ret_t;
 
   glm::vec3 nBetween = glm::cross(rayDir, tangent);
   if (glm::length(nBetween) < 1e-6)
-    return ret_t{-1, std::numeric_limits<float>::infinity(), glm::vec3{0., 0., 0.}}; // parallel
+    return {-1, std::numeric_limits<float>::infinity(), glm::vec3{0., 0., 0.}}; // parallel
 
   glm::vec3 nTan = glm::cross(tangent, nBetween);
   glm::vec3 nRay = glm::cross(rayDir, nBetween);
@@ -423,20 +396,17 @@ std::tuple<float, float, glm::vec3> TransformationGizmo::lineTest(glm::vec3 rayS
   float tLine = glm::dot(raySource - center, nRay) / glm::dot(tangent, nRay);
 
   if (tLine < -length || tLine > length || tRay < 0)
-    return ret_t{-1, std::numeric_limits<float>::infinity(), glm::vec3{0., 0., 0.}}; // out of bounds or beind
+    return {-1, std::numeric_limits<float>::infinity(), glm::vec3{0., 0., 0.}}; // out of bounds or beind
 
   glm::vec3 pRay = raySource + tRay * rayDir;
   glm::vec3 pLine = center + tLine * tangent;
 
-  return ret_t{tRay, glm::length(pRay - pLine), pLine};
+  return {tRay, glm::length(pRay - pLine), pLine};
 }
 
 std::tuple<float, float, glm::vec3> TransformationGizmo::sphereTest(glm::vec3 raySource, glm::vec3 rayDir,
                                                                     glm::vec3 center, float radius,
                                                                     bool allowHitSurface) {
-
-  // used for explicit constructors below to make old compilers (gcc-5) happy
-  typedef std::tuple<float, float, glm::vec3> ret_t;
 
   glm::vec3 oc = raySource - center;
   float b = 2. * dot(oc, rayDir);
@@ -447,18 +417,18 @@ std::tuple<float, float, glm::vec3> TransformationGizmo::sphereTest(glm::vec3 ra
     float tHit = glm::dot(rayDir, center - raySource);
     if (tHit < 0.) {
       // hit behind
-      return ret_t{-1, std::numeric_limits<float>::infinity(), glm::vec3{0., 0., 0.}};
+      return {-1, std::numeric_limits<float>::infinity(), glm::vec3{0., 0., 0.}};
     }
     glm::vec3 hitPoint = raySource + tHit * rayDir;
-    return ret_t{tHit, glm::length(hitPoint - center) - radius, hitPoint};
+    return {tHit, glm::length(hitPoint - center) - radius, hitPoint};
   } else {
     // actual hit
     float tHit = (-b - std::sqrt(disc)) / 2.;
     if (tHit < 0.) {
       // hit behind
-      return ret_t{-1, std::numeric_limits<float>::infinity(), glm::vec3{0., 0., 0.}};
+      return {-1, std::numeric_limits<float>::infinity(), glm::vec3{0., 0., 0.}};
     }
-    return ret_t{tHit, 0, raySource + tHit * rayDir};
+    return {tHit, 0, raySource + tHit * rayDir};
   }
 }
 

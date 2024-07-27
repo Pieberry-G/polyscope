@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 2.8.9)
 
 # Maybe stop from CMAKEing in the wrong place
 if (CMAKE_BINARY_DIR STREQUAL CMAKE_SOURCE_DIR)
@@ -19,7 +19,7 @@ endif()
 
 if("${POLYSCOPE_BACKEND_OPENGL3_GLFW}")
 
-  set(SRCS imgui/imgui.cpp imgui/imgui_draw.cpp imgui/imgui_tables.cpp imgui/imgui_widgets.cpp imgui/imgui_demo.cpp imgui/backends/imgui_impl_glfw.cpp imgui/backends/imgui_impl_opengl3.cpp)
+  set(SRCS imgui/imgui.cpp imgui/imgui_draw.cpp imgui/imgui_widgets.cpp imgui/imgui_demo.cpp imgui/examples/imgui_impl_glfw.cpp imgui/examples/imgui_impl_opengl3.cpp)
 
   add_library(
           imgui
@@ -30,25 +30,13 @@ if("${POLYSCOPE_BACKEND_OPENGL3_GLFW}")
   target_include_directories(imgui PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../glfw/include/")
   target_include_directories(imgui PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../glad/include/")
   
-  target_link_libraries(imgui PRIVATE glfw)
-  
+  target_link_libraries(imgui PRIVATE glfw glad)
+
   if(APPLE)
-      # On macOS, get openGL & friends from Frameworks; do not use GLAD at all
-
-      add_definitions(-DGLFW_INCLUDE_GLCOREARB)
-
-      # NOTE: This code is essentially duplicated here and in polyscope/src/CMakeLists.txt
-
-      # Apple is playing hardball and deprecating openGL... we'll cross that bridge when we come to it
-      # Silence warnings about openGL deprecation
-      add_definitions(-DGL_SILENCE_DEPRECATION)  
-      find_library(opengl_library OpenGL)
-      target_link_libraries(imgui PRIVATE ${opengl_library})
+    add_definitions(-DGLFW_INCLUDE_GLCOREARB)
+    add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_CUSTOM=<GLFW/glfw3.h>)
   else()
-      # On Windows/Linux, use the glad openGL loader
-
-      add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD)
-      target_link_libraries(imgui PRIVATE glad)
+    add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD)
   endif()
 
 elseif("${POLYSCOPE_BACKEND_OPENGL_MOCK}")
@@ -59,7 +47,7 @@ elseif("${POLYSCOPE_BACKEND_OPENGL_MOCK}")
   add_definitions(-DIMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS)
   add_definitions(-DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS)
   
-  set(SRCS imgui/imgui.cpp imgui/imgui_draw.cpp imgui/imgui_tables.cpp imgui/imgui_widgets.cpp imgui/imgui_demo.cpp)
+  set(SRCS imgui/imgui.cpp imgui/imgui_draw.cpp imgui/imgui_widgets.cpp)
 
   add_library(
           imgui

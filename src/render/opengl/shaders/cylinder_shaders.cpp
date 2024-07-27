@@ -1,11 +1,10 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 
 #include "polyscope/render/opengl/shaders/cylinder_shaders.h"
 
 namespace polyscope {
 namespace render {
-namespace backend_openGL3_glfw {
+namespace backend_openGL3_glfw { 
 
 // clang-format off
 
@@ -15,13 +14,13 @@ const ShaderStageSpecification FLEX_CYLINDER_VERT_SHADER = {
 
     // uniforms
     {
-        {"u_modelView", RenderDataType::Matrix44Float},
+        {"u_modelView", DataType::Matrix44Float},
     }, 
 
     // attributes
     {
-        {"a_position_tail", RenderDataType::Vector3Float},
-        {"a_position_tip", RenderDataType::Vector3Float},
+        {"a_position_tail", DataType::Vector3Float},
+        {"a_position_tip", DataType::Vector3Float},
     },
 
     {}, // textures
@@ -53,8 +52,8 @@ const ShaderStageSpecification FLEX_CYLINDER_GEOM_SHADER = {
     
     // uniforms
     {
-        {"u_projMatrix", RenderDataType::Matrix44Float},
-        {"u_radius", RenderDataType::Float},
+        {"u_projMatrix", DataType::Matrix44Float},
+        {"u_radius", DataType::Float},
     }, 
 
     // attributes
@@ -80,9 +79,6 @@ R"(
         void buildTangentBasis(vec3 unitNormal, out vec3 basisX, out vec3 basisY);
 
         void main() {
-            float tipRadius = u_radius;
-            float tailRadius = u_radius;
-            ${ CYLINDER_SET_RADIUS_GEOM }$
 
             // Build an orthogonal basis
             vec3 tailViewVal = gl_in[0].gl_Position.xyz / gl_in[0].gl_Position.w;
@@ -93,19 +89,17 @@ R"(
             // Compute corners of cube
             vec4 tailProj = u_projMatrix * gl_in[0].gl_Position;
             vec4 tipProj = u_projMatrix * position_tip[0];
-            vec4 dxTip = u_projMatrix * vec4(basisX * tipRadius, 0.);
-            vec4 dyTip = u_projMatrix * vec4(basisY * tipRadius, 0.);
-            vec4 dxTail = u_projMatrix * vec4(basisX * tailRadius, 0.);
-            vec4 dyTail = u_projMatrix * vec4(basisY * tailRadius, 0.);
+            vec4 dx = u_projMatrix * vec4(basisX * u_radius, 0.);
+            vec4 dy = u_projMatrix * vec4(basisY * u_radius, 0.);
 
-            vec4 p1 = tailProj - dxTail - dyTail;
-            vec4 p2 = tailProj + dxTail - dyTail;
-            vec4 p3 = tailProj - dxTail + dyTail;
-            vec4 p4 = tailProj + dxTail + dyTail;
-            vec4 p5 = tipProj - dxTip - dyTip;
-            vec4 p6 = tipProj + dxTip - dyTip;
-            vec4 p7 = tipProj - dxTip + dyTip;
-            vec4 p8 = tipProj + dxTip + dyTip;
+            vec4 p1 = tailProj - dx - dy;
+            vec4 p2 = tailProj + dx - dy;
+            vec4 p3 = tailProj - dx + dy;
+            vec4 p4 = tailProj + dx + dy;
+            vec4 p5 = tipProj - dx - dy;
+            vec4 p6 = tipProj + dx - dy;
+            vec4 p7 = tipProj - dx + dy;
+            vec4 p8 = tipProj + dx + dy;
             
             // Other data to emit   
     
@@ -139,10 +133,10 @@ const ShaderStageSpecification FLEX_CYLINDER_FRAG_SHADER = {
     
     // uniforms
     {
-        {"u_projMatrix", RenderDataType::Matrix44Float},
-        {"u_invProjMatrix", RenderDataType::Matrix44Float},
-        {"u_viewport", RenderDataType::Vector4Float},
-        {"u_radius", RenderDataType::Float},
+        {"u_projMatrix", DataType::Matrix44Float},
+        {"u_invProjMatrix", DataType::Matrix44Float},
+        {"u_viewport", DataType::Vector4Float},
+        {"u_radius", DataType::Float},
     }, 
 
     { }, // attributes
@@ -164,7 +158,7 @@ R"(
 
         float LARGE_FLOAT();
         vec3 fragmentViewPosition(vec4 viewport, vec2 depthRange, mat4 invProjMat, vec4 fragCoord);
-        bool rayTaperedCylinderIntersection(vec3 rayStart, vec3 rayDir, vec3 cylTail, vec3 cylTip, float cylRadTail, float cylRadTip, out float tHit, out vec3 pHit, out vec3 nHit);
+        bool rayCylinderIntersection(vec3 rayStart, vec3 rayDir, vec3 cylTail, vec3 cylTip, float cylRad, out float tHit, out vec3 pHit, out vec3 nHit);
         float fragDepthFromView(mat4 projMat, vec2 depthRange, vec3 viewPoint);
         
         ${ FRAG_DECLARATIONS }$
@@ -175,22 +169,16 @@ R"(
            vec2 depthRange = vec2(gl_DepthRange.near, gl_DepthRange.far);
            vec3 viewRay = fragmentViewPosition(u_viewport, depthRange, u_invProjMatrix, gl_FragCoord);
 
-           
-           float tipRadius = u_radius;
-           float tailRadius = u_radius;
-           ${ CYLINDER_SET_RADIUS_FRAG }$
-
            // Raycast to the cylinder
            float tHit;
            vec3 pHit;
            vec3 nHit;
-           rayTaperedCylinderIntersection(vec3(0., 0., 0), viewRay, tailView, tipView, tailRadius, tipRadius, tHit, pHit, nHit);
+           rayCylinderIntersection(vec3(0., 0., 0), viewRay, tailView, tipView, u_radius, tHit, pHit, nHit);
            if(tHit >= LARGE_FLOAT()) {
               discard;
            }
            float depth = fragDepthFromView(u_projMatrix, depthRange, pHit);
 
-           ${ GLOBAL_FRAGMENT_FILTER_PREP }$
            ${ GLOBAL_FRAGMENT_FILTER }$
            
            // Set depth (expensive!)
@@ -242,7 +230,7 @@ const ShaderReplacementRule CYLINDER_PROPAGATE_VALUE (
     },
     /* uniforms */ {},
     /* attributes */ {
-      {"a_value", RenderDataType::Float},
+      {"a_value", DataType::Float},
     },
     /* textures */ {}
 );
@@ -283,8 +271,8 @@ const ShaderReplacementRule CYLINDER_PROPAGATE_BLEND_VALUE (
     },
     /* uniforms */ {},
     /* attributes */ {
-      {"a_value_tail", RenderDataType::Float},
-      {"a_value_tip", RenderDataType::Float},
+      {"a_value_tail", DataType::Float},
+      {"a_value_tip", DataType::Float},
     },
     /* textures */ {}
 );
@@ -315,7 +303,7 @@ const ShaderReplacementRule CYLINDER_PROPAGATE_COLOR (
     },
     /* uniforms */ {},
     /* attributes */ {
-      {"a_color", RenderDataType::Vector3Float},
+      {"a_color", DataType::Vector3Float},
     },
     /* textures */ {}
 );
@@ -356,21 +344,9 @@ const ShaderReplacementRule CYLINDER_PROPAGATE_BLEND_COLOR (
     },
     /* uniforms */ {},
     /* attributes */ {
-      {"a_color_tail", RenderDataType::Vector3Float},
-      {"a_color_tip", RenderDataType::Vector3Float},
+      {"a_color_tail", DataType::Vector3Float},
+      {"a_color_tip", DataType::Vector3Float},
     },
-    /* textures */ {}
-);
-
-const ShaderReplacementRule CYLINDER_CULLPOS_FROM_MID (
-    /* rule name */ "CYLINDER_CULLPOS_FROM_MID",
-    { /* replacement sources */
-      {"GLOBAL_FRAGMENT_FILTER_PREP", R"(
-          vec3 cullPos = 0.5 * (tailView + tipView);
-        )"},
-    },
-    /* uniforms */ {},
-    /* attributes */ {},
     /* textures */ {}
 );
 
@@ -395,9 +371,9 @@ const ShaderReplacementRule CYLINDER_PROPAGATE_PICK (
           in vec3 a_colorTailToGeom[];
           in vec3 a_colorTipToGeom[];
           in vec3 a_colorEdgeToGeom[];
-          flat out vec3 a_colorTailToFrag;
-          flat out vec3 a_colorTipToFrag;
-          flat out vec3 a_colorEdgeToFrag;
+          out vec3 a_colorTailToFrag;
+          out vec3 a_colorTipToFrag;
+          out vec3 a_colorEdgeToFrag;
         )"},
       {"GEOM_PER_EMIT", R"(
           a_colorTailToFrag = a_colorTailToGeom[0]; 
@@ -405,9 +381,9 @@ const ShaderReplacementRule CYLINDER_PROPAGATE_PICK (
           a_colorEdgeToFrag = a_colorEdgeToGeom[0]; 
         )"},
       {"FRAG_DECLARATIONS", R"(
-          flat in vec3 a_colorTailToFrag;
-          flat in vec3 a_colorTipToFrag;
-          flat in vec3 a_colorEdgeToFrag;
+          in vec3 a_colorTailToFrag;
+          in vec3 a_colorTipToFrag;
+          in vec3 a_colorEdgeToFrag;
           float length2(vec3 x);
         )"},
       {"GENERATE_SHADE_VALUE", R"(
@@ -425,56 +401,13 @@ const ShaderReplacementRule CYLINDER_PROPAGATE_PICK (
     },
     /* uniforms */ {},
     /* attributes */ {
-      {"a_color_tail", RenderDataType::Vector3Float},
-      {"a_color_tip", RenderDataType::Vector3Float},
-      {"a_color_edge", RenderDataType::Vector3Float},
+      {"a_color_tail", DataType::Vector3Float},
+      {"a_color_tip", DataType::Vector3Float},
+      {"a_color_edge", DataType::Vector3Float},
     },
     /* textures */ {}
 );
 
-const ShaderReplacementRule CYLINDER_VARIABLE_SIZE (
-    /* rule name */ "CYLINDER_VARIABLE_SIZE",
-    { /* replacement sources */
-      {"VERT_DECLARATIONS", R"(
-          in float a_tipRadius;
-          in float a_tailRadius;
-          out float a_tipRadiusToGeom;
-          out float a_tailRadiusToGeom;
-        )"},
-      {"VERT_ASSIGNMENTS", R"(
-          a_tipRadiusToGeom = a_tipRadius;
-          a_tailRadiusToGeom = a_tailRadius;
-        )"},
-      {"GEOM_DECLARATIONS", R"(
-          in float a_tipRadiusToGeom[];
-          in float a_tailRadiusToGeom[];
-          out float a_tipRadiusToFrag;
-          out float a_tailRadiusToFrag;
-        )"},
-      {"GEOM_PER_EMIT", R"(
-          a_tipRadiusToFrag = a_tipRadiusToGeom[0]; 
-          a_tailRadiusToFrag = a_tailRadiusToGeom[0]; 
-        )"},
-      {"FRAG_DECLARATIONS", R"(
-          in float a_tipRadiusToFrag;
-          in float a_tailRadiusToFrag;
-        )"},
-      {"CYLINDER_SET_RADIUS_GEOM", R"(
-          tipRadius *= a_tipRadiusToGeom[0];
-          tailRadius *= a_tailRadiusToGeom[0];
-        )"},
-      {"CYLINDER_SET_RADIUS_FRAG", R"(
-          tipRadius *= a_tipRadiusToFrag;
-          tailRadius *= a_tailRadiusToFrag;
-        )"},
-    },
-    /* uniforms */ {},
-    /* attributes */ {
-      {"a_tipRadius", RenderDataType::Float},
-      {"a_tailRadius", RenderDataType::Float},
-    },
-    /* textures */ {}
-);
 
 // clang-format on
 

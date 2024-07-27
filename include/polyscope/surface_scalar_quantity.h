@@ -1,8 +1,5 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 #pragma once
-
-#include "polyscope/polyscope.h"
 
 #include "polyscope/affine_remapper.h"
 #include "polyscope/histogram.h"
@@ -42,6 +39,8 @@ public:
 
   virtual void createProgram() override;
 
+  void fillColorBuffers(render::ShaderProgram& p);
+
   void buildVertexInfoGUI(size_t vInd) override;
 };
 
@@ -57,6 +56,8 @@ public:
 
   virtual void createProgram() override;
 
+  void fillColorBuffers(render::ShaderProgram& p);
+
   void buildFaceInfoGUI(size_t fInd) override;
 };
 
@@ -69,8 +70,11 @@ class SurfaceEdgeScalarQuantity : public SurfaceScalarQuantity {
 public:
   SurfaceEdgeScalarQuantity(std::string name, const std::vector<double>& values_, SurfaceMesh& mesh_,
                             DataType dataType_ = DataType::STANDARD);
+  //   ~SurfaceVertexScalarQuantity();
 
   virtual void createProgram() override;
+
+  void fillColorBuffers(render::ShaderProgram& p);
 
   void buildEdgeInfoGUI(size_t edgeInd) override;
 };
@@ -83,24 +87,13 @@ class SurfaceHalfedgeScalarQuantity : public SurfaceScalarQuantity {
 public:
   SurfaceHalfedgeScalarQuantity(std::string name, const std::vector<double>& values_, SurfaceMesh& mesh_,
                                 DataType dataType_ = DataType::STANDARD);
+  //   ~SurfaceVertexScalarQuantity();
 
   virtual void createProgram() override;
+
+  void fillColorBuffers(render::ShaderProgram& p);
 
   void buildHalfedgeInfoGUI(size_t heInd) override;
-};
-
-// ========================================================
-// ==========          Corner Scalar           ==========
-// ========================================================
-
-class SurfaceCornerScalarQuantity : public SurfaceScalarQuantity {
-public:
-  SurfaceCornerScalarQuantity(std::string name, const std::vector<double>& values_, SurfaceMesh& mesh_,
-                              DataType dataType_ = DataType::STANDARD);
-
-  virtual void createProgram() override;
-
-  void buildCornerInfoGUI(size_t heInd) override;
 };
 
 

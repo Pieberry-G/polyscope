@@ -1,5 +1,4 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 #include "polyscope/render/ground_plane.h"
 
 #include "polyscope/polyscope.h"
@@ -97,7 +96,7 @@ void GroundPlane::prepare() {
     unsigned char* image = nullptr;
     image = stbi_load_from_memory(reinterpret_cast<const unsigned char*>(&render::bindata_concrete[0]),
                                   render::bindata_concrete.size(), &w, &h, &comp, STBI_rgb);
-    if (image == nullptr) exception("Failed to load material image");
+    if (image == nullptr) throw std::logic_error("Failed to load material image");
     groundPlaneProgram->setTexture2D("t_ground", image, w, h, false, false, true);
     stbi_image_free(image);
   }
@@ -213,7 +212,7 @@ void GroundPlane::draw(bool isRedraw) {
 
     if (options::groundPlaneMode == GroundPlaneMode::Tile ||
         options::groundPlaneMode == GroundPlaneMode::TileReflection) {
-      groundPlaneProgram->setUniform("u_center", state::center());
+      groundPlaneProgram->setUniform("u_center", state::center);
       groundPlaneProgram->setUniform("u_basisX", baseForward);
       groundPlaneProgram->setUniform("u_basisY", baseRight);
     }
@@ -222,19 +221,8 @@ void GroundPlane::draw(bool isRedraw) {
       groundPlaneProgram->setUniform("u_shadowDarkness", options::shadowDarkness);
     }
 
-    switch (view::projectionMode) {
-    case ProjectionMode::Perspective: {
-      float camHeight = view::getCameraWorldPosition()[iP];
-      groundPlaneProgram->setUniform("u_cameraHeight", camHeight);
-      break;
-    }
-    case ProjectionMode::Orthographic: {
-      glm::vec4 lookDir = glm::vec4(0, 0, 1, 0) * viewMat;
-      groundPlaneProgram->setUniform("u_cameraHeight", (lookDir.y * state::lengthScale) + groundHeight);
-      break;
-    }
-    }
-
+    float camHeight = view::getCameraWorldPosition()[iP];
+    groundPlaneProgram->setUniform("u_cameraHeight", camHeight);
     groundPlaneProgram->setUniform("u_upSign", sign);
     groundPlaneProgram->setUniform("u_basisZ", baseUp);
     groundPlaneProgram->setUniform("u_groundHeight", groundHeight);
@@ -286,16 +274,12 @@ void GroundPlane::draw(bool isRedraw) {
         glm::translate(glm::mat4(1.0), -tVec) * glm::mat4(mirrorMat3) * glm::translate(glm::mat4(1.0), tVec);
     view::viewMat = view::viewMat * mirrorMat;
 
-    // Flip the orientation
-    render::engine->setFrontFaceCCW(!render::engine->getFrontFaceCCW());
-
     // Draw everything
     if (!render::engine->transparencyEnabled()) { // skip when transparency is turned on
       drawStructures();
     }
 
-    // Restore original values
-    render::engine->setFrontFaceCCW(!render::engine->getFrontFaceCCW());
+    // Restore original view matrix
     view::viewMat = origViewMat;
   }
 

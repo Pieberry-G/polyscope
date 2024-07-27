@@ -1,5 +1,4 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 
 #include "polyscope/render/opengl/shaders/histogram_shaders.h"
 
@@ -17,7 +16,7 @@ const ShaderStageSpecification HISTOGRAM_VERT_SHADER =  {
 
     // attributes
     {
-        {"a_coord", RenderDataType::Vector2Float},
+        {"a_coord", DataType::Vector2Float},
     },
 
     {}, // textures
@@ -44,8 +43,8 @@ const ShaderStageSpecification HISTOGRAM_FRAG_SHADER = {
     
     // uniforms
     {
-      {"u_cmapRangeMin", RenderDataType::Float},
-      {"u_cmapRangeMax", RenderDataType::Float}
+      {"u_cmapRangeMin", DataType::Float},
+      {"u_cmapRangeMax", DataType::Float}
     }, 
 
     // attributes

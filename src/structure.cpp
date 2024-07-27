@@ -1,5 +1,4 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 #include "polyscope/structure.h"
 
 #include "polyscope/polyscope.h"
@@ -12,12 +11,7 @@ Structure::Structure(std::string name_, std::string subtypeName)
     : name(name_), enabled(subtypeName + "#" + name + "#enabled", true),
       objectTransform(subtypeName + "#" + name + "#object_transform", glm::mat4(1.0)),
       transparency(subtypeName + "#" + name + "#transparency", 1.0),
-      transformGizmo(subtypeName + "#" + name + "#transform_gizmo", objectTransform.get(), &objectTransform),
-      cullWholeElements(subtypeName + "#" + name + "#cullWholeElements", false),
-      ignoredSlicePlaneNames(subtypeName + "#" + name + "#ignored_slice_planes", {}),
-      objectSpaceBoundingBox(
-          std::tuple<glm::vec3, glm::vec3>{glm::vec3{-777, -777, -777}, glm::vec3{-777, -777, -777}}),
-      objectSpaceLengthScale(-777) {
+      transformGizmo(subtypeName + "#" + name + "#transform_gizmo", objectTransform.get(), &objectTransform) {
   validateName(name);
 }
 
@@ -26,7 +20,6 @@ Structure::~Structure(){};
 Structure* Structure::setEnabled(bool newEnabled) {
   if (newEnabled == isEnabled()) return this;
   enabled = newEnabled;
-  requestRedraw();
   return this;
 };
 
@@ -68,8 +61,7 @@ void Structure::buildUI() {
         if (ImGui::MenuItem("Center")) centerBoundingBox();
         if (ImGui::MenuItem("Unit Scale")) rescaleToUnit();
         if (ImGui::MenuItem("Reset")) resetTransform();
-        if (ImGui::MenuItem("Show Gizmo", NULL, &transformGizmo.enabled.get()))
-          transformGizmo.enabled.manuallyChanged();
+        if (ImGui::MenuItem("Show Gizmo", NULL, &transformGizmo.enabled.get())) transformGizmo.enabled.manuallyChanged();
         ImGui::EndMenu();
       }
 
@@ -82,39 +74,6 @@ void Structure::buildUI() {
         ImGui::TextUnformatted(modeName(render::engine->getTransparencyMode()).c_str());
         ImGui::EndMenu();
       }
-
-      // Toggle whether slice planes apply
-      if (ImGui::BeginMenu("Slice planes")) {
-        if (state::slicePlanes.empty()) {
-          // if there are none, show a helpful message
-          if (ImGui::Button("Add slice plane")) {
-            openSlicePlaneMenu = true;
-            addSceneSlicePlane(true);
-          }
-        } else {
-          // otherwise, show toggles for each
-          ImGui::TextUnformatted("Applies to this structure:");
-          ImGui::Indent(20);
-          for (std::unique_ptr<SlicePlane>& s : state::slicePlanes) {
-            bool ignorePlane = getIgnoreSlicePlane(s->name);
-            if (ImGui::MenuItem(s->name.c_str(), NULL, !ignorePlane)) setIgnoreSlicePlane(s->name, !ignorePlane);
-          }
-          ImGui::Indent(-20);
-        }
-        ImGui::TextUnformatted("");
-        ImGui::Separator();
-        ImGui::TextUnformatted("Note: Manage slice planes in");
-        ImGui::TextUnformatted("      View --> Slice Planes.");
-
-        ImGui::EndMenu();
-      }
-
-      if (ImGui::BeginMenu("Slice plane options")) {
-        if (ImGui::MenuItem("cull whole elements", NULL, getCullWholeElements()))
-          setCullWholeElements(!getCullWholeElements());
-        ImGui::EndMenu();
-      }
-
 
       // Selection
       if (ImGui::BeginMenu("Structure Selection")) {
@@ -152,49 +111,7 @@ void Structure::buildStructureOptionsUI() {}
 
 void Structure::buildCustomOptionsUI() {}
 
-void Structure::refresh() {
-  updateObjectSpaceBounds();
-  requestRedraw();
-}
-
-std::tuple<glm::vec3, glm::vec3> Structure::boundingBox() {
-  const glm::mat4x4& T = objectTransform.get();
-  glm::vec4 lh = T * glm::vec4(std::get<0>(objectSpaceBoundingBox), 1.);
-  glm::vec3 l = glm::vec3(lh) / lh.w;
-  glm::vec4 uh = T * glm::vec4(std::get<1>(objectSpaceBoundingBox), 1.);
-  glm::vec3 u = glm::vec3(uh) / uh.w;
-  return std::tuple<glm::vec3, glm::vec3>{l, u};
-}
-
-float Structure::lengthScale() {
-  // compute the scaling caused by the object transform
-  const glm::mat4x4& T = objectTransform.get();
-  float transScale = std::abs(glm::determinant(glm::mat3x3(T))) / T[3][3];
-  return transScale * objectSpaceLengthScale;
-}
-
-void Structure::setTransform(glm::mat4x4 transform) {
-  objectTransform = transform;
-  updateStructureExtents();
-}
-
-void Structure::setPosition(glm::vec3 vec) {
-  objectTransform.get()[3][0] = vec.x;
-  objectTransform.get()[3][1] = vec.y;
-  objectTransform.get()[3][2] = vec.z;
-  updateStructureExtents();
-}
-
-void Structure::translate(glm::vec3 vec) {
-  objectTransform = glm::translate(objectTransform.get(), vec);
-  updateStructureExtents();
-}
-
-glm::mat4x4 Structure::getTransform() { return objectTransform.get(); }
-
-glm::vec3 Structure::getPosition() {
-  return glm::vec3{objectTransform.get()[3][0], objectTransform.get()[3][1], objectTransform.get()[3][2]};
-}
+void Structure::refresh() { requestRedraw(); }
 
 void Structure::resetTransform() {
   objectTransform = glm::mat4(1.0);
@@ -217,29 +134,14 @@ void Structure::rescaleToUnit() {
   updateStructureExtents();
 }
 
-bool Structure::hasExtents() { return true; }
-
 glm::mat4 Structure::getModelView() { return view::getCameraViewMatrix() * objectTransform.get(); }
 
-std::vector<std::string> Structure::addStructureRules(std::vector<std::string> initRules) {
-  if (render::engine->slicePlanesEnabled()) {
-    if (getCullWholeElements()) {
-    } else {
-      initRules.push_back("GENERATE_VIEW_POS");
-      initRules.push_back("CULL_POS_FROM_VIEW");
-    }
-  }
-  return initRules;
-}
-
-void Structure::setStructureUniforms(render::ShaderProgram& p) {
+void Structure::setTransformUniforms(render::ShaderProgram& p) {
   glm::mat4 viewMat = getModelView();
   p.setUniform("u_modelView", glm::value_ptr(viewMat));
 
-  if (p.hasUniform("u_projMatrix")) {
-    glm::mat4 projMat = view::getCameraPerspectiveMatrix();
-    p.setUniform("u_projMatrix", glm::value_ptr(projMat));
-  }
+  glm::mat4 projMat = view::getCameraPerspectiveMatrix();
+  p.setUniform("u_projMatrix", glm::value_ptr(projMat));
 
   if (render::engine->transparencyEnabled()) {
     if (p.hasUniform("u_transparency")) {
@@ -259,34 +161,14 @@ void Structure::setStructureUniforms(render::ShaderProgram& p) {
       p.setTextureFromBuffer("t_minDepth", render::engine->sceneDepthMin.get());
     }
   }
-
-  // Respect any slice planes
-  for (std::unique_ptr<SlicePlane>& s : state::slicePlanes) {
-    bool ignoreThisPlane = getIgnoreSlicePlane(s->name);
-    s->setSceneObjectUniforms(p, ignoreThisPlane);
-  }
-
-  // TODO this chain if "if"s is not great. Set up some system in the render engine to conditionally set these? Maybe
-  // a list of lambdas? Ugh.
-  if (p.hasUniform("u_viewport_viewPos")) {
-    glm::vec4 viewport = render::engine->getCurrentViewport();
-    p.setUniform("u_viewport_viewPos", viewport);
-  }
-  if (p.hasUniform("u_invProjMatrix_viewPos")) {
-    glm::mat4 P = view::getCameraPerspectiveMatrix();
-    glm::mat4 Pinv = glm::inverse(P);
-    p.setUniform("u_invProjMatrix_viewPos", glm::value_ptr(Pinv));
-  }
 }
-
-bool Structure::wantsCullPosition() { return render::engine->slicePlanesEnabled() && getCullWholeElements(); }
 
 std::string Structure::uniquePrefix() { return typeName() + "#" + name + "#"; }
 
 void Structure::remove() { removeStructure(typeName(), name); }
 
 
-Structure* Structure::setTransparency(float newVal) {
+Structure* Structure::setTransparency(double newVal) {
   transparency = newVal;
 
   if (newVal < 1. && options::transparencyMode == TransparencyMode::None) {
@@ -296,44 +178,6 @@ Structure* Structure::setTransparency(float newVal) {
 
   return this;
 }
-float Structure::getTransparency() { return transparency.get(); }
-
-Structure* Structure::setCullWholeElements(bool newVal) {
-  cullWholeElements = newVal;
-  refresh();
-  requestRedraw();
-  return this;
-}
-bool Structure::getCullWholeElements() { return cullWholeElements.get(); }
-
-Structure* Structure::setIgnoreSlicePlane(std::string name, bool newValue) {
-
-  if (getIgnoreSlicePlane(name) == newValue) {
-    // no change
-    ignoredSlicePlaneNames.manuallyChanged();
-    refresh();
-    requestRedraw();
-    return this;
-  }
-
-  std::vector<std::string>& names = ignoredSlicePlaneNames.get();
-  if (newValue) {
-    // new value is true; add it to the list
-    names.push_back(name);
-  } else {
-    // new value is false; remove it from the list
-    names.erase(std::remove(names.begin(), names.end(), name), names.end());
-  }
-  ignoredSlicePlaneNames.manuallyChanged();
-  refresh();
-  requestRedraw();
-  return this;
-}
-
-bool Structure::getIgnoreSlicePlane(std::string name) {
-  std::vector<std::string>& names = ignoredSlicePlaneNames.get();
-  bool ignoreThisPlane = (std::find(names.begin(), names.end(), name) != names.end());
-  return ignoreThisPlane;
-}
+double Structure::getTransparency() { return transparency.get(); }
 
 } // namespace polyscope

@@ -1,5 +1,4 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 #include "polyscope/curve_network_scalar_quantity.h"
 
 #include "polyscope/file_helpers.h"
@@ -24,17 +23,14 @@ void CurveNetworkScalarQuantity::draw() {
   }
 
   // Set uniforms
-  parent.setStructureUniforms(*edgeProgram);
-  parent.setStructureUniforms(*nodeProgram);
+  parent.setTransformUniforms(*edgeProgram);
+  parent.setTransformUniforms(*nodeProgram);
 
   parent.setCurveNetworkEdgeUniforms(*edgeProgram);
   parent.setCurveNetworkNodeUniforms(*nodeProgram);
 
   setScalarUniforms(*edgeProgram);
   setScalarUniforms(*nodeProgram);
-
-  render::engine->setMaterialUniforms(*edgeProgram, parent.getMaterial());
-  render::engine->setMaterialUniforms(*nodeProgram, parent.getMaterial());
 
   edgeProgram->draw();
   nodeProgram->draw();
@@ -77,38 +73,30 @@ CurveNetworkNodeScalarQuantity::CurveNetworkNodeScalarQuantity(std::string name,
 
 void CurveNetworkNodeScalarQuantity::createProgram() {
   // Create the program to draw this quantity
-  // clang-format off
-  nodeProgram = render::engine->requestShader("RAYCAST_SPHERE", 
-      render::engine->addMaterialRules(parent.getMaterial(),
-        addScalarRules(
-          parent.addCurveNetworkNodeRules(
-            {"SPHERE_PROPAGATE_VALUE"}
-          )
-        )
-      )
-    );
-  edgeProgram = render::engine->requestShader("RAYCAST_CYLINDER", 
-      render::engine->addMaterialRules(parent.getMaterial(),
-        addScalarRules(
-          parent.addCurveNetworkEdgeRules(
-            {"CYLINDER_PROPAGATE_BLEND_VALUE"}
-          )
-        )
-      )
-    );
-  // clang-format on
+  nodeProgram = render::engine->requestShader("RAYCAST_SPHERE", addScalarRules({"SPHERE_PROPAGATE_VALUE"}));
+  edgeProgram = render::engine->requestShader("RAYCAST_CYLINDER", addScalarRules({"CYLINDER_PROPAGATE_BLEND_VALUE"}));
 
   // Fill geometry buffers
-  parent.fillNodeGeometryBuffers(*nodeProgram);
   parent.fillEdgeGeometryBuffers(*edgeProgram);
+  parent.fillNodeGeometryBuffers(*nodeProgram);
 
   { // Fill node color buffers
-    nodeProgram->setAttribute("a_value", values.getRenderAttributeBuffer());
+    nodeProgram->setAttribute("a_value", values);
   }
 
   { // Fill edge color buffers
-    edgeProgram->setAttribute("a_value_tail", values.getIndexedRenderAttributeBuffer(parent.edgeTailInds));
-    edgeProgram->setAttribute("a_value_tip", values.getIndexedRenderAttributeBuffer(parent.edgeTipInds));
+    std::vector<double> valueTail(parent.nEdges());
+    std::vector<double> valueTip(parent.nEdges());
+    for (size_t iE = 0; iE < parent.nEdges(); iE++) {
+      auto& edge = parent.edges[iE];
+      size_t eTail = std::get<0>(edge);
+      size_t eTip = std::get<1>(edge);
+      valueTail[iE] = values[eTail];
+      valueTip[iE] = values[eTip];
+    }
+
+    edgeProgram->setAttribute("a_value_tail", valueTail);
+    edgeProgram->setAttribute("a_value_tip", valueTip);
   }
 
   edgeProgram->setTextureFromColormap("t_colormap", cMap.get());
@@ -121,7 +109,7 @@ void CurveNetworkNodeScalarQuantity::createProgram() {
 void CurveNetworkNodeScalarQuantity::buildNodeInfoGUI(size_t nInd) {
   ImGui::TextUnformatted(name.c_str());
   ImGui::NextColumn();
-  ImGui::Text("%g", values.getValue(nInd));
+  ImGui::Text("%g", values[nInd]);
   ImGui::NextColumn();
 }
 
@@ -132,44 +120,39 @@ void CurveNetworkNodeScalarQuantity::buildNodeInfoGUI(size_t nInd) {
 
 CurveNetworkEdgeScalarQuantity::CurveNetworkEdgeScalarQuantity(std::string name, const std::vector<double>& values_,
                                                                CurveNetwork& network_, DataType dataType_)
-    : CurveNetworkScalarQuantity(name, network_, "edge", values_, dataType_),
-      nodeAverageValues(this, uniquePrefix() + "#nodeAverageValues", nodeAverageValuesData) {}
+    : CurveNetworkScalarQuantity(name, network_, "edge", values_, dataType_)
+
+{}
 
 void CurveNetworkEdgeScalarQuantity::createProgram() {
   // Create the program to draw this quantity
-
-  // clang-format off
-  nodeProgram = render::engine->requestShader("RAYCAST_SPHERE", 
-      render::engine->addMaterialRules(parent.getMaterial(),
-        addScalarRules(
-          parent.addCurveNetworkNodeRules(
-            {"SPHERE_PROPAGATE_VALUE"}
-          )
-        )
-      )
-    );
-  edgeProgram = render::engine->requestShader("RAYCAST_CYLINDER", 
-      render::engine->addMaterialRules(parent.getMaterial(),
-        addScalarRules(
-          parent.addCurveNetworkEdgeRules(
-            {"CYLINDER_PROPAGATE_VALUE"}
-          )
-        )
-      )
-    );
-  // clang-format on
+  nodeProgram = render::engine->requestShader("RAYCAST_SPHERE", addScalarRules({"SPHERE_PROPAGATE_VALUE"}));
+  edgeProgram = render::engine->requestShader("RAYCAST_CYLINDER", addScalarRules({"CYLINDER_PROPAGATE_VALUE"}));
 
   // Fill geometry buffers
   parent.fillEdgeGeometryBuffers(*edgeProgram);
   parent.fillNodeGeometryBuffers(*nodeProgram);
 
   { // Fill node color buffers
-    updateNodeAverageValues();
-    nodeProgram->setAttribute("a_value", nodeAverageValues.getRenderAttributeBuffer());
+    // Compute an average color at each node
+    std::vector<double> averageValueNode(parent.nNodes(), 0.);
+    for (size_t iE = 0; iE < parent.nEdges(); iE++) {
+      auto& edge = parent.edges[iE];
+      size_t eTail = std::get<0>(edge);
+      size_t eTip = std::get<1>(edge);
+      averageValueNode[eTail] += values[iE];
+      averageValueNode[eTip] += values[iE];
+    }
+
+    for (size_t iN = 0; iN < parent.nNodes(); iN++) {
+      averageValueNode[iN] /= parent.nodeDegrees[iN];
+    }
+
+    nodeProgram->setAttribute("a_value", averageValueNode);
   }
 
   { // Fill edge color buffers
-    edgeProgram->setAttribute("a_value", values.getRenderAttributeBuffer());
+    edgeProgram->setAttribute("a_value", values);
   }
 
   edgeProgram->setTextureFromColormap("t_colormap", cMap.get());
@@ -178,34 +161,11 @@ void CurveNetworkEdgeScalarQuantity::createProgram() {
   render::engine->setMaterial(*edgeProgram, parent.getMaterial());
 }
 
-void CurveNetworkEdgeScalarQuantity::updateNodeAverageValues() {
-  parent.edgeTailInds.ensureHostBufferPopulated();
-  parent.edgeTipInds.ensureHostBufferPopulated();
-  values.ensureHostBufferPopulated();
-  nodeAverageValues.data.resize(parent.nNodes());
-
-  for (size_t iE = 0; iE < parent.nEdges(); iE++) {
-    size_t eTail = parent.edgeTailInds.data[iE];
-    size_t eTip = parent.edgeTipInds.data[iE];
-
-    nodeAverageValues.data[eTail] += values.data[iE];
-    nodeAverageValues.data[eTip] += values.data[iE];
-  }
-
-  for (size_t iN = 0; iN < parent.nNodes(); iN++) {
-    nodeAverageValues.data[iN] /= parent.nodeDegrees[iN];
-    if (parent.nodeDegrees[iN] == 0) {
-      nodeAverageValues.data[iN] = 0.;
-    }
-  }
-
-  nodeAverageValues.markHostBufferUpdated();
-}
 
 void CurveNetworkEdgeScalarQuantity::buildEdgeInfoGUI(size_t eInd) {
   ImGui::TextUnformatted(name.c_str());
   ImGui::NextColumn();
-  ImGui::Text("%g", values.getValue(eInd));
+  ImGui::Text("%g", values[eInd]);
   ImGui::NextColumn();
 }
 

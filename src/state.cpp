@@ -1,5 +1,5 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors.
+// http://polyscope.run.
 #include "polyscope/polyscope.h"
 
 namespace polyscope {
@@ -7,18 +7,27 @@ namespace polyscope {
 namespace state {
 
 bool initialized = false;
-std::string backend = "";
-float lengthScale = 1.0;
-std::tuple<glm::vec3, glm::vec3> boundingBox =
-    std::tuple<glm::vec3, glm::vec3>{glm::vec3{-1., -1., -1.}, glm::vec3{1., 1., 1.}};
-std::map<std::string, std::map<std::string, std::unique_ptr<Structure>>> structures;
-std::map<std::string, std::unique_ptr<Group>> groups;
-std::function<void()> userCallback = nullptr;
-bool doDefaultMouseInteraction = true;
+double lengthScale = 1.0;
+std::tuple<glm::vec3, glm::vec3> boundingBox;
+glm::vec3 center{0, 0, 0};
+std::map<std::string, std::map<std::string, Structure*>> structures;
+std::function<void()> userCallback;
+std::set<Widget*> widgets;
 
-// Lists of things
-std::vector<WeakHandle<Widget>> widgets;
-std::vector<std::unique_ptr<SlicePlane>> slicePlanes;
+// CHANGED: for DDG
+size_t facePickIndStart;
+size_t edgePickIndStart;
+size_t halfedgePickIndStart;
+MeshSubset subset;
+int currVertexIndex = -1;
+int currFaceIndex = -1;
+int currEdgeIndex = -1;
+int deleteVertexIndex = -1;
+int deleteFaceIndex = -1;
+int deleteEdgeIndex = -1;
+
+// Added by cyh
+std::vector<glm::vec4> stroke;
 
 } // namespace state
 } // namespace polyscope

@@ -1,5 +1,3 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
 #pragma once
 
 #include "polyscope/scaled_value.h"
@@ -9,6 +7,7 @@
 #include "glm/glm.hpp"
 #include "polyscope/render/color_maps.h"
 #include "polyscope/render/materials.h"
+#include "polyscope/surface_parameterization_enums.h"
 
 #include <iostream>
 #include <string>
@@ -46,15 +45,14 @@ public:
   PersistentValue(const std::string& name_, T value_) : name(name_), value(value_) {
     if (detail::getPersistentCacheRef<T>().cache.find(name) != detail::getPersistentCacheRef<T>().cache.end()) {
       value = detail::getPersistentCacheRef<T>().cache[name];
-      holdsDefaultValue = false;
     } else {
       // Update cache value
-      detail::getPersistentCacheRef<T>().cache[name] = value;
+      manuallyChanged();
     }
   }
 
   // Ensure in cache on deletion (see not above reference conversion)
-  ~PersistentValue() {}
+  ~PersistentValue() { set(value); }
 
   // Don't want copy or move constructors, only operators
   PersistentValue(const PersistentValue&) = delete;
@@ -82,8 +80,8 @@ public:
     return *this;
   }
 
-  // NOTE if you write via this reference, the value will not _actually_ be cached until
-  // manuallyChanged() is called, rather than immediately (ugly, but seems necessary to use with imgui)
+  // NOTE if you write via this reference, the value will not _actually_ be cached until destruction or
+  // manuallyChanged() is called, rather than immediately (ugly, but seems necessary to use with imgui)...
   T& get() { return value; }
   void manuallyChanged() { set(value); }
 
@@ -91,26 +89,15 @@ public:
   void set(T value_) {
     value = value_;
     detail::getPersistentCacheRef<T>().cache[name] = value;
-    holdsDefaultValue = false;
-  }
-
-  // Passive setter, will change value without marking in cache; does nothing if some value has already been directly
-  // set (equivalent to constructing with a different value).
-  void setPassive(T value_) {
-    if (holdsDefaultValue) {
-      value = value_;
-      detail::getPersistentCacheRef<T>().cache[name] = value;
-    }
   }
 
   // Make all template variants friends, so conversion can access private members
   template <typename>
   friend class PersistentValue;
 
+private:
   const std::string name;
   T value;
-  bool holdsDefaultValue = true; // True if the value was set on construction and never changed. False if it was pulled
-                                 // from cache or has ever been explicitly set
 };
 
 // clang-format off
@@ -123,23 +110,19 @@ extern PersistentCache<glm::vec3> persistentCache_glmvec3;
 extern PersistentCache<glm::mat4> persistentCache_glmmat4;
 extern PersistentCache<ScaledValue<double>> persistentCache_scaleddouble;
 extern PersistentCache<ScaledValue<float>> persistentCache_scaledfloat;
-extern PersistentCache<std::vector<std::string>> persistentCache_vectorstring;
 extern PersistentCache<ParamVizStyle> persistentCache_paramVizStyle;
-extern PersistentCache<BackFacePolicy> persistentCache_BackFacePolicy;
-extern PersistentCache<MeshShadeStyle> persistentCache_MeshNormalType;
+extern PersistentCache<BackfacePolicy> persistentCache_backfacePolicy;
 
-template<> inline PersistentCache<double>&                   getPersistentCacheRef<double>()                   { return persistentCache_double; }
-template<> inline PersistentCache<float>&                    getPersistentCacheRef<float>()                    { return persistentCache_float; }
-template<> inline PersistentCache<bool>&                     getPersistentCacheRef<bool>()                     { return persistentCache_bool; }
-template<> inline PersistentCache<std::string>&              getPersistentCacheRef<std::string>()              { return persistentCache_string; }
-template<> inline PersistentCache<glm::vec3>&                getPersistentCacheRef<glm::vec3>()                { return persistentCache_glmvec3; }
-template<> inline PersistentCache<glm::mat4>&                getPersistentCacheRef<glm::mat4>()                { return persistentCache_glmmat4; }
-template<> inline PersistentCache<ScaledValue<double>>&      getPersistentCacheRef<ScaledValue<double>>()      { return persistentCache_scaleddouble; }
-template<> inline PersistentCache<ScaledValue<float>>&       getPersistentCacheRef<ScaledValue<float>>()       { return persistentCache_scaledfloat; }
-template<> inline PersistentCache<std::vector<std::string>>& getPersistentCacheRef<std::vector<std::string>>() { return persistentCache_vectorstring; }
-template<> inline PersistentCache<ParamVizStyle>&            getPersistentCacheRef<ParamVizStyle>()            { return persistentCache_paramVizStyle; }
-template<> inline PersistentCache<BackFacePolicy>&           getPersistentCacheRef<BackFacePolicy>()           { return persistentCache_BackFacePolicy; }
-template<> inline PersistentCache<MeshShadeStyle>&           getPersistentCacheRef<MeshShadeStyle>()           { return persistentCache_MeshNormalType; }
+template<> inline PersistentCache<double>&                  getPersistentCacheRef<double>()                 { return persistentCache_double; }
+template<> inline PersistentCache<float>&                   getPersistentCacheRef<float>()                  { return persistentCache_float; }
+template<> inline PersistentCache<bool>&                    getPersistentCacheRef<bool>()                   { return persistentCache_bool; }
+template<> inline PersistentCache<std::string>&             getPersistentCacheRef<std::string>()            { return persistentCache_string; }
+template<> inline PersistentCache<glm::vec3>&               getPersistentCacheRef<glm::vec3>()              { return persistentCache_glmvec3; }
+template<> inline PersistentCache<glm::mat4>&               getPersistentCacheRef<glm::mat4>()              { return persistentCache_glmmat4; }
+template<> inline PersistentCache<ScaledValue<double>>&     getPersistentCacheRef<ScaledValue<double>>()    { return persistentCache_scaleddouble; }
+template<> inline PersistentCache<ScaledValue<float>>&      getPersistentCacheRef<ScaledValue<float>>()     { return persistentCache_scaledfloat; }
+template<> inline PersistentCache<ParamVizStyle>&           getPersistentCacheRef<ParamVizStyle>()          { return persistentCache_paramVizStyle; }
+template<> inline PersistentCache<BackfacePolicy>&          getPersistentCacheRef<BackfacePolicy>()         { return persistentCache_backfacePolicy; }
 }
 // clang-format on
 

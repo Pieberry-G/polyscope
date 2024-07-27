@@ -1,5 +1,3 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
 #include "polyscope/render/opengl/shaders/rules.h"
 
 namespace polyscope {
@@ -79,12 +77,11 @@ const ShaderReplacementRule SHADE_BASECOLOR (
       {"GENERATE_SHADE_COLOR", "vec3 albedoColor = u_baseColor;"}
     },
     /* uniforms */ {
-      {"u_baseColor", RenderDataType::Vector3Float},
+      {"u_baseColor", DataType::Vector3Float},
     },
     /* attributes */ {},
     /* textures */ {}
 );
-
 
 // input: vec3 shadeColor 
 // output: vec3 albedoColor
@@ -115,8 +112,8 @@ const ShaderReplacementRule SHADE_COLORMAP_VALUE(
       )"}
     },
     /* uniforms */ {
-        {"u_rangeLow", RenderDataType::Float},
-        {"u_rangeHigh", RenderDataType::Float},
+        {"u_rangeLow", DataType::Float},
+        {"u_rangeHigh", DataType::Float},
     },
     /* attributes */ {},
     /* textures */ {
@@ -141,7 +138,7 @@ const ShaderReplacementRule SHADE_COLORMAP_ANGULAR2(
       )"}
     },
     /* uniforms */ {
-        {"u_angle", RenderDataType::Float},
+        {"u_angle", DataType::Float},
     },
     /* attributes */ {},
     /* textures */ {
@@ -171,9 +168,9 @@ const ShaderReplacementRule SHADE_GRID_VALUE2 (
       )"}
     },
     /* uniforms */ {
-       {"u_modLen", RenderDataType::Float},
-       {"u_gridLineColor", RenderDataType::Vector3Float},
-       {"u_gridBackgroundColor", RenderDataType::Vector3Float},
+       {"u_modLen", DataType::Float},
+       {"u_gridLineColor", DataType::Vector3Float},
+       {"u_gridBackgroundColor", DataType::Vector3Float},
     },
     /* attributes */ {},
     /* textures */ {}
@@ -201,9 +198,9 @@ const ShaderReplacementRule SHADE_CHECKER_VALUE2 (
       )"}
     },
     /* uniforms */ {
-       {"u_modLen", RenderDataType::Float},
-       {"u_color1", RenderDataType::Vector3Float},
-       {"u_color2", RenderDataType::Vector3Float},
+       {"u_modLen", DataType::Float},
+       {"u_color1", DataType::Vector3Float},
+       {"u_color2", DataType::Vector3Float},
     },
     /* attributes */ {},
     /* textures */ {}
@@ -227,18 +224,16 @@ const ShaderReplacementRule ISOLINE_STRIPE_VALUECOLOR (
     { /* replacement sources */
       {"FRAG_DECLARATIONS", R"(
           uniform float u_modLen;
-          uniform float u_modDarkness;
         )"},
       {"GENERATE_SHADE_COLOR", R"(
         float modVal = mod(shadeValue, 2.0 * u_modLen);
         if(modVal > u_modLen) {
-          albedoColor *= u_modDarkness;
+          albedoColor *= 0.7;
         }
       )"}
     },
     /* uniforms */ {
-        {"u_modLen", RenderDataType::Float},
-        {"u_modDarkness", RenderDataType::Float},
+        {"u_modLen", DataType::Float},
     },
     /* attributes */ {},
     /* textures */ {}
@@ -249,10 +244,9 @@ const ShaderReplacementRule CHECKER_VALUE2COLOR (
     { /* replacement sources */
       {"FRAG_DECLARATIONS", R"(
           uniform float u_modLen;
-          uniform float u_modDarkness;
         )"},
       {"GENERATE_SHADE_COLOR", R"(
-        vec3 albedoColorDark = albedoColor * u_modDarkness;
+        vec3 albedoColorDark = albedoColor * .5;
         float mX = mod(shadeValue2.x, 2.0 * u_modLen) / u_modLen - 1.f; // in [-1, 1]
         float mY = mod(shadeValue2.y, 2.0 * u_modLen) / u_modLen - 1.f;
         float minD = min( min(abs(mX), 1.0 - abs(mX)), min(abs(mY), 1.0 - abs(mY))) * 2.; // rect distace from flipping sign in [0,1]
@@ -265,101 +259,11 @@ const ShaderReplacementRule CHECKER_VALUE2COLOR (
       )"}
     },
     /* uniforms */ {
-       {"u_modLen", RenderDataType::Float},
-       {"u_modDarkness", RenderDataType::Float},
+       {"u_modLen", DataType::Float},
     },
     /* attributes */ {},
     /* textures */ {}
 );
-
-
-const ShaderReplacementRule GENERATE_VIEW_POS (
-    /* rule name */ "GENERATE_VIEW_POS",
-    { /* replacement sources */
-      {"FRAG_DECLARATIONS", R"(
-          uniform mat4 u_invProjMatrix_viewPos; // weird names are to unique-ify because we have multiple....
-          uniform vec4 u_viewport_viewPos;
-          vec3 fragmentViewPosition(vec4 viewport, vec2 depthRange, mat4 invProjMat, vec4 fragCoord);
-        )"},
-      {"GLOBAL_FRAGMENT_FILTER_PREP", R"(
-        vec2 depthRange_viewPos = vec2(gl_DepthRange.near, gl_DepthRange.far);
-        vec4 fragCoord_viewPos = gl_FragCoord;
-        fragCoord_viewPos.z = depth;
-        vec3 viewPos = fragmentViewPosition(u_viewport_viewPos, depthRange_viewPos, u_invProjMatrix_viewPos, fragCoord_viewPos);
-      )"}
-    },
-    /* uniforms */ {
-      {"u_invProjMatrix_viewPos", RenderDataType::Matrix44Float},
-      {"u_viewport_viewPos", RenderDataType::Vector4Float},
-    },
-    /* attributes */ {},
-    /* textures */ {}
-);
-
-// TODO delete me
-const ShaderReplacementRule CULL_POS_FROM_VIEW (
-    /* rule name */ "CULL_POS_FROM_VIEW",
-    { /* replacement sources */
-      {"GLOBAL_FRAGMENT_FILTER_PREP", R"(
-        vec3 cullPos = viewPos;
-      )"},
-    },
-    /* uniforms */ {
-    },
-    /* attributes */ {},
-    /* textures */ {}
-);
-
-
-ShaderReplacementRule generateSlicePlaneRule(std::string uniquePostfix) {
-
-  std::string centerUniformName = "u_slicePlaneCenter_" + uniquePostfix;
-  std::string normalUniformName = "u_slicePlaneNormal_" + uniquePostfix;
-
-  // This takes what is otherwise a simple rule, and substitues uniquely named uniforms so that we can have multiple slice planes
-  ShaderReplacementRule slicePlaneRule (
-      /* rule name */ "SLICE_PLANE_CULL_" + uniquePostfix,
-      { /* replacement sources */
-        {"FRAG_DECLARATIONS", "uniform vec3 " + centerUniformName + "; uniform vec3 " + normalUniformName + ";"},
-        {"GLOBAL_FRAGMENT_FILTER", 
-         "if(dot(cullPos, " + normalUniformName + ") < dot( " + centerUniformName + " , " + normalUniformName + ")) { discard; }"}
-      },
-      /* uniforms */ {
-        {centerUniformName, RenderDataType::Vector3Float},
-        {normalUniformName, RenderDataType::Vector3Float},
-      },
-      /* attributes */ {},
-      /* textures */ {}
-  );
-
-  return slicePlaneRule;
-}
-
-ShaderReplacementRule generateVolumeGridSlicePlaneRule(std::string uniquePostfix) {
-
-  std::string centerUniformName = "u_slicePlaneCenter_" + uniquePostfix;
-  std::string normalUniformName = "u_slicePlaneNormal_" + uniquePostfix;
-
-  // This takes what is otherwise a simple rule, and substitues uniquely named uniforms so that we can have multiple slice planes
-  ShaderReplacementRule slicePlaneRule (
-      /* rule name */ "SLICE_PLANE_VOLUMEGRID_CULL_" + uniquePostfix,
-      { /* replacement sources */
-        // skip the frag declarations, we will already have them from the other rule
-        // {"FRAG_DECLARATIONS", "uniform vec3 " + centerUniformName + "; uniform vec3 " + normalUniformName + ";"},
-        {"GRID_PLANE_NEIGHBOR_FILTER",
-         "if(dot(neighCullPos, " + normalUniformName + ") < dot( " + centerUniformName + " , " + normalUniformName + ")) { neighIsVisible = false; }"
-        }
-      },
-      /* uniforms */ {
-        {centerUniformName, RenderDataType::Vector3Float},
-        {normalUniformName, RenderDataType::Vector3Float},
-      },
-      /* attributes */ {},
-      /* textures */ {}
-  );
-
-  return slicePlaneRule;
-}
 
 // clang-format on
 

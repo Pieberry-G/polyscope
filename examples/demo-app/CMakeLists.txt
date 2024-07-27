@@ -1,6 +1,4 @@
-cmake_minimum_required(VERSION 2.8.9...3.22)
-
-project(polyscope-demo-app)
+cmake_minimum_required(VERSION 2.8.9)
 
 # Maybe stop from CMAKEing in the wrong place
 if (CMAKE_BINARY_DIR STREQUAL CMAKE_SOURCE_DIR)
@@ -18,7 +16,7 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS 1 ) # Emit a compile flags file to support co
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # using Clang (linux or apple) or GCC
   message("Using clang/gcc compiler flags")
-  SET(BASE_CXX_FLAGS "-std=c++11 -Wall -Wextra -g3")
+  SET(BASE_CXX_FLAGS "-std=c++11 -Wall -Wextra -Werror -g3")
   SET(DISABLED_WARNINGS " -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wno-deprecated-declarations -Wno-missing-braces")
   SET(TRACE_INCLUDES " -H -Wno-error=unused-command-line-argument")
 
@@ -28,7 +26,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STR
     SET(CMAKE_CXX_FLAGS_DEBUG          "-fsanitize=address -fno-limit-debug-info")
   elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     SET(BASE_CXX_FLAGS "${BASE_CXX_FLAGS} -fmax-errors=5")
-    SET(CMAKE_CXX_FLAGS_DEBUG          "-fsanitize=address")
     message("Setting gcc-specific options")
     SET(DISABLED_WARNINGS "${DISABLED_WARNINGS} -Wno-maybe-uninitialized -Wno-format-zero-length -Wno-unused-but-set-parameter -Wno-unused-but-set-variable")
   endif()
@@ -38,14 +35,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STR
   #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TRACE_INCLUDES}") # uncomment if you need to track down where something is getting included from
   SET(CMAKE_CXX_FLAGS_DEBUG          "${CMAKE_CXX_FLAGS_DEBUG} -g3")
   SET(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os -DNDEBUG")
-  include(CheckCXXCompilerFlag)
-  CHECK_CXX_COMPILER_FLAG(-march=native  COMPILER_SUPPORTS_MARCH_NATIVE)
-  if(COMPILER_SUPPORTS_MARCH_NATIVE)
-    set(MARCH_NATIVE "-march=native")
-  else()
-    set(MARCH_NATIVE "")
-  endif()
-  SET(CMAKE_CXX_FLAGS_RELEASE        "${MARCH_NATIVE} -O3 -DNDEBUG")
+  SET(CMAKE_CXX_FLAGS_RELEASE        "-march=native -O3 -DNDEBUG")
   SET(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # using Visual Studio C++
@@ -73,14 +63,9 @@ add_subdirectory(../../ "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 add_executable(
         polyscopedemo
         demo_app.cpp
-        simple_dot_mesh_parser.cpp
-        surface_mesh_io.cpp
         )
 
 target_include_directories(polyscopedemo PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../deps/args")
 target_include_directories(polyscopedemo PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../deps/json/include")
-target_include_directories(polyscopedemo PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../deps/happly")
-target_include_directories(polyscopedemo PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../deps/stb")
-target_include_directories(polyscopedemo PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
-target_link_libraries(polyscopedemo polyscope stb)
+target_link_libraries(polyscopedemo polyscope)

@@ -1,10 +1,11 @@
-// Copyright 2017-2023, Nicholas Sharp and the Polyscope contributors. https://polyscope.run
-
+// Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 #pragma once
 
 // This file defines common routines used by
 // multiple shaders; it is combined at link time with all fragment
 // shaders compiled via the methods in the GLProgram class.
+
+#include "polyscope/render/opengl/gl_engine.h"
 
 namespace polyscope {
 namespace render {
