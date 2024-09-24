@@ -301,7 +301,50 @@ void processInputEvents() {
       // Process drags
       bool dragLeft = ImGui::IsMouseDragging(0);
       bool dragRight = !dragLeft && ImGui::IsMouseDragging(1); // left takes priority, so only one can be true
-      if (dragLeft || dragRight) {
+
+      // Process strokeline
+      if (render::engine->isKeyDown('q') && dragLeft) {
+
+        ImVec2 p = ImGui::GetMousePos();
+        std::pair<Structure*, size_t> pickResult =
+            pick::evaluatePickQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y);
+        pick::setSelection(pickResult);
+
+        if (pickResult.first != nullptr) {
+          pick::updateGBuffer();
+          glm::vec3 position = pick::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
+          glm::vec3 normal = pick::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 1);
+          if (!state::strokePosition.empty()) {
+            float distance = glm::length(glm::vec3(position - state::strokePosition.back()));
+            float minThreshold = state::edgeLengthScale * 0.5;
+            float maxThreshold = state::edgeLengthScale * 2.5;
+
+            if (distance > minThreshold && distance < maxThreshold) {
+              state::strokePosition.push_back(position);
+              state::strokeNormal.push_back(normal);
+              showStroke();
+            }
+          } else {
+            state::strokePosition.push_back(position);
+            state::strokeNormal.push_back(normal);
+            showStroke();
+          }
+        }
+      }
+
+      static bool keyW = false;
+      if (render::engine->isKeyReleased('w') && !keyW) {
+        adornStrokeWithGems();
+        keyW = true;
+      }
+
+      static bool keyE = false;
+      if (render::engine->isKeyReleased('e') && !keyE) {
+        corefinementDifference();
+        keyE = true;
+      }
+
+      if (render::engine->noKeyDown() && dragLeft || dragRight) {
 
         glm::vec2 dragDelta{io.MouseDelta.x / view::windowWidth, -io.MouseDelta.y / view::windowHeight};
         dragDistSinceLastRelease += std::abs(dragDelta.x);
@@ -445,7 +488,7 @@ void renderScene() {
 
     render::engine->sceneBuffer->blitTo(render::engine->sceneBufferFinal.get());
   }
-} // namespace
+}
 
 void renderSceneToScreen() {
   render::engine->bindDisplay();
@@ -459,6 +502,42 @@ void renderSceneToScreen() {
 }
 
 auto lastMainLoopIterTime = std::chrono::steady_clock::now();
+
+// Added by cyh
+void renderMeshDemo() {
+  render::FrameBuffer* meshDemoBuffer = render::engine->meshDemoBuffer.get();
+
+  render::engine->setDepthMode();
+  render::engine->setBlendMode();
+
+  meshDemoBuffer->resize(128, 128);
+  meshDemoBuffer->setViewport(0, 0, 128, 128);
+  meshDemoBuffer->clearColor = glm::vec3{0., 0., 0.};
+  meshDemoBuffer->clearAlpha = 0.0f;
+  if (!meshDemoBuffer->bindForRendering()) return;
+  meshDemoBuffer->clear();
+
+  // Render pos buffer
+  for (auto cat : state::structures) {
+    for (auto x : cat.second) {
+      if (x.first.compare(0, 3, "Gem") == 0) {
+          x.second->drawMeshDemo();
+
+          std::vector<glm::vec4> data = render::engine->meshDemoColor->getDataVector4();
+          unsigned char* buffer = new unsigned char[128 * 128 * 4];
+          
+          for (size_t i = 0; i < data.size(); ++i) {
+            buffer[i * 4 + 0] = static_cast<unsigned char>(data[i].r * 255.0f); // R
+            buffer[i * 4 + 1] = static_cast<unsigned char>(data[i].g * 255.0f); // G
+            buffer[i * 4 + 2] = static_cast<unsigned char>(data[i].b * 255.0f); // B
+            buffer[i * 4 + 3] = static_cast<unsigned char>(data[i].a * 255.0f); // A
+          }
+          saveImage(x.first + ".png", buffer, 128, 128, 4);
+      }
+    }
+  }
+
+}
 
 } // namespace
 
@@ -666,6 +745,8 @@ void draw(bool withUI, bool withContextCallback) {
   if (withUI) {
     render::engine->ImGuiNewFrame();
   }
+
+  //renderMeshDemo();
 
   // Build the GUI components
   if (withUI) {

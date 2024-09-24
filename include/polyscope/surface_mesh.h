@@ -74,9 +74,11 @@ public:
 
   // Render the the structure on screen
   virtual void draw() override;
+  virtual void drawMeshDemo() override;
 
   // Render for picking
   virtual void drawPick() override;
+  virtual void drawGBuffer() override;
 
   virtual void updateObjectSpaceBounds() override;
   virtual std::string typeName() override;
@@ -321,6 +323,7 @@ private:
   // Do setup work related to drawing, including allocating openGL data
   void prepare();
   void preparePick();
+  void prepareGBuffer();
   void geometryChanged(); // call whenever geometry changed
 
   // Picking-related
@@ -338,6 +341,7 @@ private:
   // Drawing related things
   std::shared_ptr<render::ShaderProgram> program;
   std::shared_ptr<render::ShaderProgram> pickProgram;
+  std::shared_ptr<render::ShaderProgram> gBufferProgram;
 
 
   // === Helper functions

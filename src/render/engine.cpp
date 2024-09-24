@@ -572,6 +572,28 @@ void Engine::allocateGlobalBuffersAndPrograms() {
     pickFramebuffer->setDrawBuffers();
   }
 
+  { // Geometry buffer
+    gBufferPositionBuffer = generateRenderBuffer(RenderBufferType::Float4, view::bufferWidth, view::bufferHeight);
+    gBufferNormalBuffer = generateRenderBuffer(RenderBufferType::Float4, view::bufferWidth, view::bufferHeight);
+    gBufferDepthBuffer = generateRenderBuffer(RenderBufferType::Depth, view::bufferWidth, view::bufferHeight);
+
+    gBuffer = generateFrameBuffer(view::bufferWidth, view::bufferHeight);
+    gBuffer->addColorBuffer(gBufferPositionBuffer);
+    gBuffer->addColorBuffer(gBufferNormalBuffer);
+    gBuffer->addDepthBuffer(gBufferDepthBuffer);
+    gBuffer->setDrawBuffers();
+  }
+
+  { // Mesh demo buffer
+    meshDemoColor = generateTextureBuffer(TextureFormat::RGBA16F, 128, 128);
+    meshDemoDepth = generateTextureBuffer(TextureFormat::DEPTH24, 128, 128);
+
+    meshDemoBuffer = generateFrameBuffer(128, 128);
+    meshDemoBuffer->addColorBuffer(meshDemoColor);
+    meshDemoBuffer->addDepthBuffer(meshDemoDepth);
+    meshDemoBuffer->setDrawBuffers();
+  }
+
   // Make sure all the buffer sizes are up to date
   updateWindowSize(true);
 

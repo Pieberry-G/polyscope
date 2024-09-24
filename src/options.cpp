@@ -5,7 +5,7 @@
 namespace polyscope {
 namespace options {
 
-std::string programName = "Polyscope";
+std::string programName = "GemCraft";
 int verbosity = 2;
 std::string printPrefix = "[polyscope] ";
 bool errorsThrowExceptions = false;
@@ -13,7 +13,7 @@ bool debugDrawPickBuffer = false;
 int maxFPS = 60;
 bool usePrefsFile = true;
 bool initializeWithDefaultStructures = true;
-bool alwaysRedraw = false;
+bool alwaysRedraw = true;
 bool autocenterStructures = false;
 bool autoscaleStructures = false;
 bool automaticallyComputeSceneExtents = true;

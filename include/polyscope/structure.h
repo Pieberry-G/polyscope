@@ -35,7 +35,9 @@ public:
 
   // == Render the the structure on screen
   virtual void draw() = 0;
+  virtual void drawMeshDemo() = 0;
   virtual void drawPick() = 0;
+  virtual void drawGBuffer() = 0;
 
   // == Add rendering rules
   std::vector<std::string> addStructureRules(std::vector<std::string> initRules);

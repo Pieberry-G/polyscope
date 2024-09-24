@@ -17,6 +17,10 @@
 #include <set>
 #include <unordered_set>
 
+// Added by cyh
+#include "../../../include/core/mesh_subset.h"
+#include "../../../include/utils/setup.h"
+
 
 namespace polyscope {
 
@@ -70,7 +74,15 @@ extern bool doDefaultMouseInteraction;
 // a callback function used to render a "user" gui
 extern std::function<void()> userCallback;
 
-
+// Added by cyh
+extern size_t facePickIndStart;
+extern size_t edgePickIndStart;
+extern size_t halfedgePickIndStart;
+extern MeshSubset subset;
+extern std::vector<glm::vec3> strokePosition;
+extern std::vector<glm::vec3> strokeNormal;
+extern float edgeLengthScale;
+extern std::array<glm::vec2, 2> selectionBox;
 
 
 // representative center for all registered structures

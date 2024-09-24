@@ -18,5 +18,15 @@ bool doDefaultMouseInteraction = true;
 std::set<Widget*> widgets;
 std::vector<SlicePlane*> slicePlanes;
 
+// Added by cyh
+size_t facePickIndStart;
+size_t edgePickIndStart;
+size_t halfedgePickIndStart;
+MeshSubset subset;
+std::vector<glm::vec3> strokePosition;
+std::vector<glm::vec3> strokeNormal;
+float edgeLengthScale;
+std::array<glm::vec2, 2> selectionBox = {glm::vec2(-1, -1), glm::vec2(-1, -1)};
+
 } // namespace state
 } // namespace polyscope
