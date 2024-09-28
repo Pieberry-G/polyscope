@@ -1262,8 +1262,6 @@ void MockGLEngine::pollEvents() {}
 
 bool MockGLEngine::isKeyPressed(char c) { return false; }
 
-bool MockGLEngine::isKeyReleased(char c) { return false; }
-
 bool MockGLEngine::isKeyDown(char c) { return false; }
 
 bool MockGLEngine::noKeyDown() { return false; }
@@ -1294,6 +1292,8 @@ std::string MockGLEngine::getClipboardText() {
 }
 
 void MockGLEngine::setClipboardText(std::string text) {}
+
+void* MockGLEngine::getNativeWindow() const { return nullptr; }
 
 // == Factories
 std::shared_ptr<TextureBuffer> MockGLEngine::generateTextureBuffer(TextureFormat format, unsigned int size1D,

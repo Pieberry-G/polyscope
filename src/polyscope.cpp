@@ -322,26 +322,14 @@ void processInputEvents() {
             if (distance > minThreshold && distance < maxThreshold) {
               state::strokePosition.push_back(position);
               state::strokeNormal.push_back(normal);
-              showStroke();
+              render::engine->getRenderCallback()("ShowRingStroke");
             }
           } else {
             state::strokePosition.push_back(position);
             state::strokeNormal.push_back(normal);
-            showStroke();
+            render::engine->getRenderCallback()("ShowRingStroke");
           }
         }
-      }
-
-      static bool keyW = false;
-      if (render::engine->isKeyReleased('w') && !keyW) {
-        adornStrokeWithGems();
-        keyW = true;
-      }
-
-      static bool keyE = false;
-      if (render::engine->isKeyReleased('e') && !keyE) {
-        corefinementDifference();
-        keyE = true;
       }
 
       if (render::engine->noKeyDown() && dragLeft || dragRight) {

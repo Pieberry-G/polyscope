@@ -228,11 +228,12 @@ public:
   bool windowRequestsClose() override;
   void pollEvents() override;
   bool isKeyPressed(char c) override;  // for lowercase a-z and 0-9 only
-  bool isKeyReleased(char c) override; // for lowercase a-z and 0-9 only
   bool isKeyDown(char c) override;     // for lowercase a-z and 0-9 only
   bool noKeyDown() override;           // for lowercase a-z and 0-9 only
   std::string getClipboardText() override;
   void setClipboardText(std::string text) override;
+
+  void* getNativeWindow() const override;
 
   // ImGui
   void initializeImGui() override;

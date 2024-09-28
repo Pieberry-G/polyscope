@@ -1729,6 +1729,76 @@ void GLEngine::initialize() {
   view::windowWidth = newWindowWidth;
   view::windowHeight = newWindowHeight;
 
+  glfwSetWindowUserPointer(mainWindow, &eventCallback);
+
+  // Added by cyh, set GLFW event callbacks
+  glfwSetWindowSizeCallback(mainWindow, [](GLFWwindow* window, int width, int height) {
+    const EventCallbackFn& eventCallback = *(EventCallbackFn*)glfwGetWindowUserPointer(window);
+    gemcraft::WindowResizeEvent event(width, height);
+    eventCallback(event);
+  });
+
+  glfwSetWindowCloseCallback(mainWindow, [](GLFWwindow* window) {
+    const EventCallbackFn& eventCallback = *(EventCallbackFn*)glfwGetWindowUserPointer(window);
+    gemcraft::WindowCloseEvent event;
+    eventCallback(event);
+  });
+
+  glfwSetKeyCallback(mainWindow, [](GLFWwindow* window, int key, int scancode, int action, int mods) {
+    const EventCallbackFn& eventCallback = *(EventCallbackFn*)glfwGetWindowUserPointer(window);
+    switch (action) {
+      case GLFW_PRESS: {
+        gemcraft::KeyPressedEvent event(key, false);
+        eventCallback(event);
+        break;
+      }
+      case GLFW_RELEASE: {
+        gemcraft::KeyReleasedEvent event(key);
+        eventCallback(event);
+        break;
+      }
+      case GLFW_REPEAT: {
+        gemcraft::KeyPressedEvent event(key, true);
+        eventCallback(event);
+        break;
+      }
+    }
+  });
+
+  glfwSetCharCallback(mainWindow, [](GLFWwindow* window, unsigned int keycode) {
+    const EventCallbackFn& eventCallback = *(EventCallbackFn*)glfwGetWindowUserPointer(window);
+    gemcraft::KeyTypedEvent event(keycode);
+    eventCallback(event);
+  });
+
+  glfwSetMouseButtonCallback(mainWindow, [](GLFWwindow* window, int button, int action, int mods) {
+    const EventCallbackFn& eventCallback = *(EventCallbackFn*)glfwGetWindowUserPointer(window);
+    switch (action) {
+    case GLFW_PRESS: {
+      gemcraft::MouseButtonPressedEvent event(button);
+      eventCallback(event);
+      break;
+    }
+    case GLFW_RELEASE: {
+      gemcraft::MouseButtonReleasedEvent event(button);
+      eventCallback(event);
+      break;
+    }
+    }
+  });
+
+  glfwSetScrollCallback(mainWindow, [](GLFWwindow* window, double xOffset, double yOffset) {
+    const EventCallbackFn& eventCallback = *(EventCallbackFn*)glfwGetWindowUserPointer(window);
+    gemcraft::MouseScrolledEvent event((float)xOffset, (float)yOffset);
+    eventCallback(event);
+  });
+
+  glfwSetCursorPosCallback(mainWindow, [](GLFWwindow* window, double xPos, double yPos) {
+    const EventCallbackFn& eventCallback = *(EventCallbackFn*)glfwGetWindowUserPointer(window);
+    gemcraft::MouseMovedEvent event((float)xPos, (float)yPos);
+    eventCallback(event);
+  });
+
 // === Initialize openGL
 // Load openGL functions (using GLAD)
 #ifndef __APPLE__
@@ -1868,12 +1938,6 @@ bool GLEngine::isKeyPressed(char c) {
   throw std::runtime_error("keyPressed only supports 0-9, a-z");
 }
 
-bool GLEngine::isKeyReleased(char c) {
-  if (c >= '0' && c <= '9') return ImGui::IsKeyReleased(GLFW_KEY_0 + (c - '0'));
-  if (c >= 'a' && c <= 'z') return ImGui::IsKeyReleased(GLFW_KEY_A + (c - 'a'));
-  throw std::runtime_error("keyPressed only supports 0-9, a-z");
-}
-
 bool GLEngine::isKeyDown(char c) {
   if (c >= '0' && c <= '9') return ImGui::IsKeyDown(static_cast<ImGuiKey>(GLFW_KEY_0 + (c - '0')));
   if (c >= 'a' && c <= 'z') return ImGui::IsKeyDown(static_cast<ImGuiKey>(GLFW_KEY_A + (c - 'a')));
@@ -1990,6 +2054,8 @@ std::string GLEngine::getClipboardText() {
 }
 
 void GLEngine::setClipboardText(std::string text) { ImGui::SetClipboardText(text.c_str()); }
+
+void* GLEngine::getNativeWindow() const { return mainWindow; }
 
 void GLEngine::applyTransparencySettings() {
   // Remove any old transparency-related rules

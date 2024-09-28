@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <functional>
 
 #include "polyscope/render/color_maps.h"
 #include "polyscope/render/ground_plane.h"
@@ -13,6 +14,9 @@
 #include "polyscope/view.h"
 
 #include "imgui.h"
+
+// Added by cyh
+#include "../../../include/Core/EventSystem.h"
 
 namespace polyscope {
 
@@ -301,6 +305,14 @@ protected:
 class Engine {
 
 public:
+  // Added by cyh
+  // Event callback
+  using EventCallbackFn = std::function<void(gemcraft::Event&)>;
+  void setEventCallback(const EventCallbackFn& callback) { eventCallback = callback; }
+  using RenderCallbackFn = std::function<void(const std::string&)>;
+  void setRenderCallback(const RenderCallbackFn& callback) { renderCallback = callback; }
+  const RenderCallbackFn& getRenderCallback() const { return renderCallback; }
+
   // Options
 
   // High-level control
@@ -355,11 +367,13 @@ public:
   virtual bool windowRequestsClose() = 0;
   virtual void pollEvents() = 0;
   virtual bool isKeyPressed(char c) = 0;  // for lowercase a-z and 0-9 only
-  virtual bool isKeyReleased(char c) = 0; // for lowercase a-z and 0-9 only
   virtual bool isKeyDown(char c) = 0;     // for lowercase a-z and 0-9 only
   virtual bool noKeyDown() = 0;           // for lowercase a-z and 0-9 only
   virtual std::string getClipboardText() = 0;
   virtual void setClipboardText(std::string text) = 0;
+
+  // Added by cyh
+  virtual void* getNativeWindow() const = 0;
 
   // ImGui
   virtual void initializeImGui() = 0;
@@ -470,6 +484,10 @@ public:
 
 protected:
   // TODO Manage a cache of compiled shaders?
+
+  // Added by cyh
+  EventCallbackFn eventCallback;
+  RenderCallbackFn renderCallback;
 
   // Render state
   int ssaaFactor = 1;

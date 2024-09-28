@@ -18,8 +18,8 @@
 #include <unordered_set>
 
 // Added by cyh
-#include "../../../include/core/mesh_subset.h"
-#include "../../../include/utils/setup.h"
+#include "../../../include/Core/mesh_subset.h"
+#include "../../../include/Utils/setup.h"
 
 
 namespace polyscope {
