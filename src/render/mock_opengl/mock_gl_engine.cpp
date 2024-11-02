@@ -165,6 +165,18 @@ std::vector<glm::vec3> GLTextureBuffer::getDataVector3() {
 
   return outData;
 }
+
+std::vector<glm::vec4> GLTextureBuffer::getDataVector4() {
+  if (dimension(format) != 4)
+    throw std::runtime_error("called getDataVector4 on texture which does not have a 4 dimensional format");
+  throw std::runtime_error("not implemented");
+
+  std::vector<glm::vec4> outData;
+  outData.resize(getSizeX() * getSizeY());
+
+  return outData;
+}
+
 void GLTextureBuffer::bind() {
   if (dim == 1) {
   }
@@ -295,14 +307,14 @@ void GLFrameBuffer::clear() {
   if (!bindForRendering()) return;
 }
 
-std::array<float, 4> GLFrameBuffer::readFloat4(int xPos, int yPos) {
+std::array<float, 4> GLFrameBuffer::readFloat4(int xPos, int yPos, int index) {
   // Read from the buffer
   std::array<float, 4> result = {1., 2., 3., 4.};
 
   return result;
 }
 
-std::vector<unsigned char> GLFrameBuffer::readBuffer() {
+std::vector<unsigned char> GLFrameBuffer::readBuffer(int index) {
   bind();
 
   int w = getSizeX();
@@ -311,6 +323,19 @@ std::vector<unsigned char> GLFrameBuffer::readBuffer() {
   // Read from openGL
   size_t buffSize = w * h * 4;
   std::vector<unsigned char> buff(buffSize);
+
+  return buff;
+}
+
+std::vector<std::array<float, 4>> GLFrameBuffer::readFloatBuffer(int index) {
+  bind();
+
+  int w = getSizeX();
+  int h = getSizeY();
+
+  // Read from openGL
+  size_t buffSize = w * h * 4;
+  std::vector<std::array<float, 4>> buff(buffSize);
 
   return buff;
 }
@@ -1237,6 +1262,10 @@ void MockGLEngine::pollEvents() {}
 
 bool MockGLEngine::isKeyPressed(char c) { return false; }
 
+bool MockGLEngine::isKeyDown(char c) { return false; }
+
+bool MockGLEngine::noKeyDown() { return false; }
+
 void MockGLEngine::ImGuiNewFrame() {
 
   // ImGUI seems to crash without a backend if we don't do this
@@ -1263,6 +1292,8 @@ std::string MockGLEngine::getClipboardText() {
 }
 
 void MockGLEngine::setClipboardText(std::string text) {}
+
+void* MockGLEngine::getNativeWindow() const { return nullptr; }
 
 // == Factories
 std::shared_ptr<TextureBuffer> MockGLEngine::generateTextureBuffer(TextureFormat format, unsigned int size1D,

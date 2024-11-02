@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <functional>
 
 #include "polyscope/render/color_maps.h"
 #include "polyscope/render/ground_plane.h"
@@ -13,6 +14,9 @@
 #include "polyscope/view.h"
 
 #include "imgui.h"
+
+// Added by cyh
+#include "../../../include/core/EventSystem.h"
 
 namespace polyscope {
 
@@ -68,6 +72,7 @@ public:
   virtual std::vector<float> getDataScalar() = 0;
   virtual std::vector<glm::vec2> getDataVector2() = 0;
   virtual std::vector<glm::vec3> getDataVector3() = 0;
+  virtual std::vector<glm::vec4> getDataVector4() = 0;
 
   // Set texture data
   // void fillTextureData1D(std::string name, unsigned char* texData, unsigned int length);
@@ -139,9 +144,10 @@ public:
   void verifyBufferSizes();
 
   // Query pixel
-  virtual std::array<float, 4> readFloat4(int xPos, int yPos) = 0;
+  virtual std::array<float, 4> readFloat4(int xPos, int yPos, int index = 0) = 0;
+  virtual std::vector<unsigned char> readBuffer(int index = 0) = 0;
+  virtual std::vector<std::array<float, 4>> readFloatBuffer(int index = 0) = 0;
   virtual void blitTo(FrameBuffer* other) = 0;
-  virtual std::vector<unsigned char> readBuffer() = 0;
 
 protected:
   unsigned int sizeX, sizeY;
@@ -299,6 +305,12 @@ protected:
 class Engine {
 
 public:
+  // Added by cyh
+  // Event callback
+  using EventCallbackFn = std::function<void(GemCraft::Event&)>;
+  const EventCallbackFn& getEventCallbackFn() const { return eventCallback; }
+  void setEventCallback(const EventCallbackFn& callback) { eventCallback = callback; }
+
   // Options
 
   // High-level control
@@ -352,9 +364,14 @@ public:
   virtual std::tuple<int, int> getWindowPos() = 0;
   virtual bool windowRequestsClose() = 0;
   virtual void pollEvents() = 0;
-  virtual bool isKeyPressed(char c) = 0; // for lowercase a-z and 0-9 only
+  virtual bool isKeyPressed(char c) = 0;  // for lowercase a-z and 0-9 only
+  virtual bool isKeyDown(char c) = 0;     // for lowercase a-z and 0-9 only
+  virtual bool noKeyDown() = 0;           // for lowercase a-z and 0-9 only
   virtual std::string getClipboardText() = 0;
   virtual void setClipboardText(std::string text) = 0;
+
+  // Added by cyh
+  virtual void* getNativeWindow() const = 0;
 
   // ImGui
   virtual void initializeImGui() = 0;
@@ -397,11 +414,15 @@ public:
   std::shared_ptr<FrameBuffer> sceneBuffer, sceneBufferFinal;
   std::shared_ptr<FrameBuffer> pickFramebuffer;
   std::shared_ptr<FrameBuffer> sceneDepthMinFrame;
+  std::shared_ptr<FrameBuffer> gBuffer;
+  std::shared_ptr<FrameBuffer> meshDemoBuffer;
 
   // Main buffers for rendering
   // sceneDepthMin is an optional texture copy of the depth buffe used for some effects
   std::shared_ptr<TextureBuffer> sceneColor, sceneColorFinal, sceneDepth, sceneDepthMin;
   std::shared_ptr<RenderBuffer> pickColorBuffer, pickDepthBuffer;
+  std::shared_ptr<RenderBuffer> gBufferPositionBuffer, gBufferNormalBuffer, gBufferDepthBuffer;
+  std::shared_ptr<TextureBuffer> meshDemoColor, meshDemoDepth;
 
   // General-use programs used by the engine
   std::shared_ptr<ShaderProgram> renderTexturePlain, renderTextureDot3, renderTextureMap3, renderTextureSphereBG;
@@ -461,6 +482,9 @@ public:
 
 protected:
   // TODO Manage a cache of compiled shaders?
+
+  // Added by cyh
+  EventCallbackFn eventCallback;
 
   // Render state
   int ssaaFactor = 1;

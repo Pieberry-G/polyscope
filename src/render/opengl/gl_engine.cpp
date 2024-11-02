@@ -24,6 +24,8 @@
 #include "polyscope/render/opengl/shaders/vector_shaders.h"
 #include "polyscope/render/opengl/shaders/volume_mesh_shaders.h"
 
+#include "polyscope/render/opengl/shaders/custom_shaders.h"
+
 #include "stb_image.h"
 
 #include <set>
@@ -345,9 +347,22 @@ std::vector<glm::vec2> GLTextureBuffer::getDataVector2() {
 std::vector<glm::vec3> GLTextureBuffer::getDataVector3() {
   if (dimension(format) != 3)
     throw std::runtime_error("called getDataVector3 on texture which does not have a 3 dimensional format");
-  throw std::runtime_error("not implemented");
 
   std::vector<glm::vec3> outData;
+  outData.resize(getTotalSize());
+
+  bind();
+  glGetTexImage(textureType(), 0, formatF(format), GL_FLOAT, static_cast<void*>(&outData.front()));
+  checkGLError();
+
+  return outData;
+}
+
+std::vector<glm::vec4> GLTextureBuffer::getDataVector4() {
+  if (dimension(format) != 4)
+    throw std::runtime_error("called getDataVector4 on texture which does not have a 4 dimensional format");
+
+  std::vector<glm::vec4> outData;
   outData.resize(getTotalSize());
 
   bind();
@@ -551,7 +566,7 @@ void GLFrameBuffer::clear() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 }
 
-std::array<float, 4> GLFrameBuffer::readFloat4(int xPos, int yPos) {
+std::array<float, 4> GLFrameBuffer::readFloat4(int xPos, int yPos, int index) {
 
   // if (colorRenderBuffer == nullptr || colorRenderBuffer->getType() != RenderBufferType::Float4) {
   // throw std::runtime_error("OpenGL error: buffer is not of right type to read float4 from");
@@ -564,13 +579,15 @@ std::array<float, 4> GLFrameBuffer::readFloat4(int xPos, int yPos) {
 
   // Read from the buffer
   std::array<float, 4> result;
+  glReadBuffer(GL_COLOR_ATTACHMENT0 + index);
   glReadPixels(xPos, yPos, 1, 1, GL_RGBA, GL_FLOAT, &result);
+  glReadBuffer(GL_COLOR_ATTACHMENT0);
 
   return result;
 }
 
 
-std::vector<unsigned char> GLFrameBuffer::readBuffer() {
+std::vector<unsigned char> GLFrameBuffer::readBuffer(int index) {
 
   glFlush();
   glFinish();
@@ -583,7 +600,29 @@ std::vector<unsigned char> GLFrameBuffer::readBuffer() {
   // Read from openGL
   size_t buffSize = w * h * 4;
   std::vector<unsigned char> buff(buffSize);
+  glReadBuffer(GL_COLOR_ATTACHMENT0 + index);
   glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, &(buff.front()));
+  glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+  return buff;
+}
+
+std::vector<std::array<float, 4>> GLFrameBuffer::readFloatBuffer(int index) {
+
+  glFlush();
+  glFinish();
+
+  bind();
+
+  int w = getSizeX();
+  int h = getSizeY();
+
+  // Read from openGL
+  size_t buffSize = w * h * 4;
+  std::vector<std::array<float, 4>> buff(buffSize);
+  glReadBuffer(GL_COLOR_ATTACHMENT0 + index);
+  glReadPixels(0, 0, w, h, GL_RGBA, GL_FLOAT, &(buff.front()));
+  glReadBuffer(GL_COLOR_ATTACHMENT0);
 
   return buff;
 }
@@ -1690,6 +1729,76 @@ void GLEngine::initialize() {
   view::windowWidth = newWindowWidth;
   view::windowHeight = newWindowHeight;
 
+  glfwSetWindowUserPointer(mainWindow, &eventCallback);
+
+  // Added by cyh, set GLFW event callbacks
+  glfwSetWindowSizeCallback(mainWindow, [](GLFWwindow* window, int width, int height) {
+    const EventCallbackFn& eventCallback = *(EventCallbackFn*)glfwGetWindowUserPointer(window);
+    GemCraft::WindowResizeEvent event(width, height);
+    eventCallback(event);
+  });
+
+  glfwSetWindowCloseCallback(mainWindow, [](GLFWwindow* window) {
+    const EventCallbackFn& eventCallback = *(EventCallbackFn*)glfwGetWindowUserPointer(window);
+    GemCraft::WindowCloseEvent event;
+    eventCallback(event);
+  });
+
+  glfwSetKeyCallback(mainWindow, [](GLFWwindow* window, int key, int scancode, int action, int mods) {
+    const EventCallbackFn& eventCallback = *(EventCallbackFn*)glfwGetWindowUserPointer(window);
+    switch (action) {
+      case GLFW_PRESS: {
+        GemCraft::KeyPressedEvent event(key, false);
+        eventCallback(event);
+        break;
+      }
+      case GLFW_RELEASE: {
+        GemCraft::KeyReleasedEvent event(key);
+        eventCallback(event);
+        break;
+      }
+      case GLFW_REPEAT: {
+        GemCraft::KeyPressedEvent event(key, true);
+        eventCallback(event);
+        break;
+      }
+    }
+  });
+
+  glfwSetCharCallback(mainWindow, [](GLFWwindow* window, unsigned int keycode) {
+    const EventCallbackFn& eventCallback = *(EventCallbackFn*)glfwGetWindowUserPointer(window);
+    GemCraft::KeyTypedEvent event(keycode);
+    eventCallback(event);
+  });
+
+  glfwSetMouseButtonCallback(mainWindow, [](GLFWwindow* window, int button, int action, int mods) {
+    const EventCallbackFn& eventCallback = *(EventCallbackFn*)glfwGetWindowUserPointer(window);
+    switch (action) {
+    case GLFW_PRESS: {
+      GemCraft::MouseButtonPressedEvent event(button);
+      eventCallback(event);
+      break;
+    }
+    case GLFW_RELEASE: {
+      GemCraft::MouseButtonReleasedEvent event(button);
+      eventCallback(event);
+      break;
+    }
+    }
+  });
+
+  glfwSetScrollCallback(mainWindow, [](GLFWwindow* window, double xOffset, double yOffset) {
+    const EventCallbackFn& eventCallback = *(EventCallbackFn*)glfwGetWindowUserPointer(window);
+    GemCraft::MouseScrolledEvent event((float)xOffset, (float)yOffset);
+    eventCallback(event);
+  });
+
+  glfwSetCursorPosCallback(mainWindow, [](GLFWwindow* window, double xPos, double yPos) {
+    const EventCallbackFn& eventCallback = *(EventCallbackFn*)glfwGetWindowUserPointer(window);
+    GemCraft::MouseMovedEvent event((float)xPos, (float)yPos);
+    eventCallback(event);
+  });
+
 // === Initialize openGL
 // Load openGL functions (using GLAD)
 #ifndef __APPLE__
@@ -1829,6 +1938,26 @@ bool GLEngine::isKeyPressed(char c) {
   throw std::runtime_error("keyPressed only supports 0-9, a-z");
 }
 
+bool GLEngine::isKeyDown(char c) {
+  if (c >= '0' && c <= '9') return ImGui::IsKeyDown(static_cast<ImGuiKey>(GLFW_KEY_0 + (c - '0')));
+  if (c >= 'a' && c <= 'z') return ImGui::IsKeyDown(static_cast<ImGuiKey>(GLFW_KEY_A + (c - 'a')));
+  throw std::runtime_error("keyDown only supports 0-9, a-z, A-Z");
+}
+
+bool GLEngine::noKeyDown() {
+  for (char c = '0'; c <= '9'; c++) {
+    if (ImGui::IsKeyDown(static_cast<ImGuiKey>(GLFW_KEY_0 + (c - '0')))) {
+      return false;
+    }
+  }
+  for (char c = 'a'; c <= 'z'; c++) {
+    if (ImGui::IsKeyDown(static_cast<ImGuiKey>(GLFW_KEY_A + (c - 'a')))) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void GLEngine::ImGuiNewFrame() {
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
@@ -1925,6 +2054,8 @@ std::string GLEngine::getClipboardText() {
 }
 
 void GLEngine::setClipboardText(std::string text) { ImGui::SetClipboardText(text.c_str()); }
+
+void* GLEngine::getNativeWindow() const { return mainWindow; }
 
 void GLEngine::applyTransparencySettings() {
   // Remove any old transparency-related rules
@@ -2078,6 +2209,10 @@ void GLEngine::populateDefaultShadersAndRules() {
   registeredShaderPrograms.insert({"SCALAR_TEXTURE_COLORMAP", {{TEXTURE_DRAW_VERT_SHADER, SCALAR_TEXTURE_COLORMAP}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"BLUR_RGB", {{TEXTURE_DRAW_VERT_SHADER, BLUR_RGB}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"TRANSFORMATION_GIZMO_ROT", {{TRANSFORMATION_GIZMO_ROT_VERT, TRANSFORMATION_GIZMO_ROT_FRAG}, DrawMode::Triangles}});
+
+  // Added by cyh
+  registeredShaderPrograms.insert({"MESH_GBUFFER", {{MESH_GBUFFER_VERT_SHADER, MESH_GBUFFER_FRAG_SHADER}, DrawMode::Triangles}});
+  registeredShaderPrograms.insert({"SELECTION_BOX", {{SELECTION_BOX_VERT_SHADER, SELECTION_BOX_FRAG_SHADER}, DrawMode::Lines}});
 
   // === Load rules
 

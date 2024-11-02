@@ -246,6 +246,55 @@ void drawStructures() {
   }
 }
 
+// Added by cyh
+void drawSelectionBox() {
+  glm::vec2 p1 = state::selectionBox[0];
+  glm::vec2 p2 = state::selectionBox[1];
+  if (p1.x == -1 || p1.y == -1 || p2.x == -1 || p2.y == -1) return;
+
+
+  p1 = {state::selectionBox[0].x / (view::windowWidth - 1),
+        (view::windowHeight - state::selectionBox[0].y) / (view::windowHeight - 1)};
+  p2 = {state::selectionBox[1].x / (view::windowWidth - 1),
+        (view::windowHeight - state::selectionBox[1].y) / (view::windowHeight - 1)};
+
+  render::engine->setDepthMode(DepthMode::Disable);
+  render::engine->setBlendMode(BlendMode::Disable);
+
+  std::shared_ptr<render::ShaderProgram> program;
+  program = render::engine->requestShader("SELECTION_BOX", std::vector<std::string>(),
+                                          render::ShaderReplacementDefaults::Process);
+
+  std::vector<glm::vec3> positions;
+  std::vector<glm::vec3> colors;
+
+  glm::vec3 topLeft = glm::vec3(p1.x, p1.y, 0.0f);
+  glm::vec3 topRight = glm::vec3(p2.x, p1.y, 0.0f);
+  glm::vec3 bottomLeft = glm::vec3(p1.x, p2.y, 0.0f);
+  glm::vec3 bottomRight = glm::vec3(p2.x, p2.y, 0.0f);
+  glm::vec3 lineColor = glm::vec3(1.0f, 0.0f, 0.0f);
+
+  positions.push_back(topLeft);
+  positions.push_back(bottomLeft);
+
+  positions.push_back(bottomLeft);
+  positions.push_back(bottomRight);
+
+  positions.push_back(bottomRight);
+  positions.push_back(topRight);
+
+  positions.push_back(topRight);
+  positions.push_back(topLeft);
+
+  for (int i = 0; i < 8; i++) colors.push_back(lineColor);
+
+  // Store data in buffers
+  program->setAttribute("a_position", positions);
+  program->setAttribute("a_color", colors);
+
+  program->draw();
+}
+
 namespace {
 
 float dragDistSinceLastRelease = 0.0;
@@ -298,10 +347,137 @@ void processInputEvents() {
     // === Mouse inputs
     if (!io.WantCaptureMouse && !widgetCapturedMouse) {
 
-      // Process drags
       bool dragLeft = ImGui::IsMouseDragging(0);
       bool dragRight = !dragLeft && ImGui::IsMouseDragging(1); // left takes priority, so only one can be true
-      if (dragLeft || dragRight) {
+
+      // Process geodesic path
+      if (render::engine->isKeyDown('z') && ImGui::IsMouseClicked(0)) {
+        ImVec2 p = ImGui::GetMousePos();
+        std::pair<Structure*, size_t> pickResult = pick::evaluatePickQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y);
+        pick::setSelection(pickResult);
+        if (pickResult.first && pickResult.first->name == "Ring") {
+          pick::updateGBuffer();
+          state::startPath = pick::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
+          auto& eventCallback = render::engine->getEventCallbackFn();
+          GemCraft::AppRenderEvent event("ShowSourcePoint");
+          eventCallback(event);
+        }
+      }
+
+      if (render::engine->isKeyDown('x') && ImGui::IsMouseClicked(0)) {
+        ImVec2 p = ImGui::GetMousePos();
+        std::pair<Structure*, size_t> pickResult =
+            pick::evaluatePickQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y);
+        pick::setSelection(pickResult);
+        if (pickResult.first && pickResult.first->name == "Ring") {
+          pick::updateGBuffer();
+          state::endPath = pick::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
+          auto& eventCallback = render::engine->getEventCallbackFn();
+          GemCraft::AppRenderEvent event("ShowTargetPoint");
+          eventCallback(event);
+        }
+      }
+
+      // Process strokeline
+      if (render::engine->isKeyDown('q') && dragLeft) {
+        ImVec2 p = ImGui::GetMousePos();
+        std::pair<Structure*, size_t> pickResult = pick::evaluatePickQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y);
+        pick::setSelection(pickResult);
+        if (pickResult.first && pickResult.first->name == "Ring") {
+          pick::updateGBuffer();
+          glm::vec3 position = pick::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
+          glm::vec3 normal = pick::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 1);
+
+          float distance;
+          float minThreshold = state::edgeLengthScale * 0.5;
+          float maxThreshold = state::edgeLengthScale * 2.5;
+          if (!state::strokePosition.empty()) {
+            distance = glm::length(glm::vec3(position - state::strokePosition.back()));
+          } 
+          if (state::strokePosition.empty() || (distance > minThreshold && distance < maxThreshold)) {
+            state::strokePosition.push_back(position);
+            state::strokeNormal.push_back(normal);
+            auto& eventCallback = render::engine->getEventCallbackFn();
+            GemCraft::AppRenderEvent event("ShowRingStroke");
+            eventCallback(event);
+          }
+        }
+      }
+
+      // Process selection box
+      if (false && render::engine->isKeyDown('a')) {
+        glm::vec2 currPos{io.MousePos.x, io.MousePos.y};
+        if (ImGui::IsMouseClicked(0)) {
+          state::selectionBox[0] = currPos;
+        } 
+        if (ImGui::IsMouseDragging(0)) {
+          state::selectionBox[1] = currPos;
+        } 
+        if (ImGui::IsMouseReleased(0)) {
+          glm::vec2 p1 = state::selectionBox[0];
+          glm::vec2 p2 = state::selectionBox[1];
+          if (p1.x > p2.x) std::swap(p1.x, p2.x);
+          if (p1.y > p2.y) std::swap(p1.y, p2.y);
+          p1.x = std::max(0.0f, p1.x);
+          p1.y = std::max(0.0f, p1.y);
+          p2.x = std::min((float)view::windowWidth - 1, p2.x);
+          p2.y = std::min((float)view::windowHeight - 1, p2.y);
+          pick::updatePickFramebuffer();
+          std::vector<std::pair<Structure*, size_t>> pickFramebufferContent = pick::pickQuery(p1, p2);
+
+          int width = p2.x - p1.x + 1;
+          int height = p2.y - p1.y + 1;
+          for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+              std::pair<Structure*, size_t> pickResult = pickFramebufferContent[i * width + j];
+              if (pickResult.first != nullptr) {
+                if (pickResult.second < state::facePickIndStart) {
+                  size_t idx = pickResult.second;
+                  if (io.KeyShift) {
+                    state::subset.vertices.erase(idx);
+                  } else {
+                    state::subset.vertices.insert(idx);
+                  }
+                } else if (pickResult.second < state::edgePickIndStart) {
+                  size_t idx = pickResult.second - state::facePickIndStart;
+                  if (io.KeyShift) {
+                    state::subset.faces.erase(idx);
+                  } else {
+                    state::subset.faces.insert(idx);
+                  }
+                } else if (pickResult.second < state::halfedgePickIndStart) {
+                  size_t idx = pickResult.second - state::edgePickIndStart;
+                  std::set<size_t>::iterator it = state::subset.edges.find(idx);
+                  if (io.KeyShift) {
+                    state::subset.edges.erase(idx);
+                  } else {
+                    state::subset.edges.insert(idx);
+                  }
+                } else if (pickResult.second >= state::halfedgePickIndStart) {
+                  size_t idx = pickResult.second - state::halfedgePickIndStart;
+                  std::set<size_t>::iterator it = state::subset.halfedges.find(idx);
+                  if (io.KeyShift) {
+                    state::subset.halfedges.erase(idx);
+                  } else {
+                    state::subset.halfedges.insert(idx);
+                  }
+                }
+              }
+            }
+          }
+          auto& eventCallback = render::engine->getEventCallbackFn();
+          GemCraft::AppRenderEvent event("ShowRingSelected");
+          eventCallback(event);
+          state::selectionBox[0] = glm::vec2(-1, -1);
+          state::selectionBox[1] = glm::vec2(-1, -1);
+        }
+      } else {
+        state::selectionBox[0] = glm::vec2(-1, -1);
+        state::selectionBox[1] = glm::vec2(-1, -1);
+      }
+
+      // Process camera
+      if (render::engine->noKeyDown() && dragLeft || dragRight) {
 
         glm::vec2 dragDelta{io.MouseDelta.x / view::windowWidth, -io.MouseDelta.y / view::windowHeight};
         dragDistSinceLastRelease += std::abs(dragDelta.x);
@@ -445,7 +621,7 @@ void renderScene() {
 
     render::engine->sceneBuffer->blitTo(render::engine->sceneBufferFinal.get());
   }
-} // namespace
+}
 
 void renderSceneToScreen() {
   render::engine->bindDisplay();
@@ -459,6 +635,42 @@ void renderSceneToScreen() {
 }
 
 auto lastMainLoopIterTime = std::chrono::steady_clock::now();
+
+// Added by cyh
+void renderMeshDemo() {
+  render::FrameBuffer* meshDemoBuffer = render::engine->meshDemoBuffer.get();
+
+  render::engine->setDepthMode();
+  render::engine->setBlendMode();
+
+  meshDemoBuffer->resize(1028, 1028);
+  meshDemoBuffer->setViewport(0, 0, 1028, 1028);
+  meshDemoBuffer->clearColor = glm::vec3{0., 0., 0.};
+  meshDemoBuffer->clearAlpha = 0.0f;
+  if (!meshDemoBuffer->bindForRendering()) return;
+  meshDemoBuffer->clear();
+
+  // Render pos buffer
+  for (auto cat : state::structures) {
+    for (auto x : cat.second) {
+      if (x.first.compare(0, 3, "Gem") == 0) {
+          x.second->drawMeshDemo();
+
+          std::vector<glm::vec4> data = render::engine->meshDemoColor->getDataVector4();
+          unsigned char* buffer = new unsigned char[1028 * 1028 * 4];
+          
+          for (size_t i = 0; i < data.size(); ++i) {
+            buffer[i * 4 + 0] = static_cast<unsigned char>(data[i].r * 255.0f); // R
+            buffer[i * 4 + 1] = static_cast<unsigned char>(data[i].g * 255.0f); // G
+            buffer[i * 4 + 2] = static_cast<unsigned char>(data[i].b * 255.0f); // B
+            buffer[i * 4 + 3] = static_cast<unsigned char>(data[i].a * 255.0f); // A
+          }
+          saveImage(x.first + ".png", buffer, 1028, 1028, 4);
+      }
+    }
+  }
+
+}
 
 } // namespace
 
@@ -627,29 +839,27 @@ void buildUserGuiAndInvokeCallback() {
     return;
   }
 
-  if (state::userCallback) {
-
+  if (!state::userCallbacks.empty()) {
     if (options::buildGui && options::openImGuiWindowForUserCallback) {
-      ImGui::PushID("user_callback");
-      ImGui::SetNextWindowPos(ImVec2(view::windowWidth - (rightWindowsWidth + imguiStackMargin), imguiStackMargin));
-      ImGui::SetNextWindowSize(ImVec2(rightWindowsWidth, 0.));
+      lastWindowHeightUser = -imguiStackMargin;
+      for (size_t i = 0; i < state::userCallbacks.size(); i++) {
+        ImGui::SetNextWindowPos(ImVec2(view::windowWidth - (rightWindowsWidth + imguiStackMargin),
+                                       lastWindowHeightUser + 2 * imguiStackMargin));
+        ImGui::SetNextWindowSize(ImVec2(rightWindowsWidth, 0.));
 
-      ImGui::Begin("Command UI", nullptr);
-    }
+        // Need to supplement ImGui::PushID() and ImGui::Begin()
+        state::userCallbacks[i]();
 
-    state::userCallback();
-
-    if (options::buildGui && options::openImGuiWindowForUserCallback) {
-      rightWindowsWidth = ImGui::GetWindowWidth();
-      lastWindowHeightUser = imguiStackMargin + ImGui::GetWindowHeight();
-      ImGui::End();
-      ImGui::PopID();
+        rightWindowsWidth = ImGui::GetWindowWidth();
+        lastWindowHeightUser = lastWindowHeightUser + imguiStackMargin + ImGui::GetWindowHeight();
+        ImGui::End();
+        ImGui::PopID();
+      } 
     } else {
-      lastWindowHeightUser = imguiStackMargin;
-    }
-
+      lastWindowHeightUser = -imguiStackMargin;
+    } 
   } else {
-    lastWindowHeightUser = imguiStackMargin;
+    lastWindowHeightUser = -imguiStackMargin;
   }
 }
 
@@ -666,6 +876,8 @@ void draw(bool withUI, bool withContextCallback) {
   if (withUI) {
     render::engine->ImGuiNewFrame();
   }
+
+  //renderMeshDemo();
 
   // Build the GUI components
   if (withUI) {
@@ -701,6 +913,11 @@ void draw(bool withUI, bool withContextCallback) {
     renderScene();
     redrawNextFrame = false;
   }
+
+  // Added by cyh
+  // Draw the selection box
+  drawSelectionBox();
+
   renderSceneToScreen();
 
   // Draw the GUI

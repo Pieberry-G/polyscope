@@ -36,6 +36,7 @@ public:
   std::vector<float> getDataScalar() override;
   std::vector<glm::vec2> getDataVector2() override;
   std::vector<glm::vec3> getDataVector3() override;
+  std::vector<glm::vec4> getDataVector4() override;
 
   void bind();
 
@@ -77,8 +78,9 @@ public:
   void setDrawBuffers() override;
 
   // Query pixels
-  std::vector<unsigned char> readBuffer() override;
-  std::array<float, 4> readFloat4(int xPos, int yPos) override;
+  std::vector<unsigned char> readBuffer(int index) override;
+  std::array<float, 4> readFloat4(int xPos, int yPos, int index) override;
+  std::vector<std::array<float, 4>> readFloatBuffer(int index) override;
   void blitTo(FrameBuffer* other) override;
 
   // Getters
@@ -225,9 +227,13 @@ public:
   std::tuple<int, int> getWindowPos() override;
   bool windowRequestsClose() override;
   void pollEvents() override;
-  bool isKeyPressed(char c) override; // for lowercase a-z and 0-9 only
+  bool isKeyPressed(char c) override;  // for lowercase a-z and 0-9 only
+  bool isKeyDown(char c) override;     // for lowercase a-z and 0-9 only
+  bool noKeyDown() override;           // for lowercase a-z and 0-9 only
   std::string getClipboardText() override;
   void setClipboardText(std::string text) override;
+
+  void* getNativeWindow() const override;
 
   // ImGui
   void initializeImGui() override;

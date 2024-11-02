@@ -346,6 +346,55 @@ void SurfaceMesh::draw() {
   render::engine->setBackfaceCull(); // return to default setting
 }
 
+void SurfaceMesh::drawMeshDemo() {
+  if (!isEnabled()) {
+    return;
+  }
+
+  render::engine->setBackfaceCull(backFacePolicy.get() == BackFacePolicy::Cull);
+
+  // If no quantity is drawing the surface, we should draw it
+  if (dominantQuantity == nullptr) {
+
+    if (program == nullptr) {
+      prepare();
+
+      // do this now to reduce lag when picking later, etc
+      preparePick();
+    }
+
+    // Set uniforms
+    setStructureUniforms(*program);
+
+    //glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 3.0f, -2.0f), glm::vec3(0.0, 0.8, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 view = glm::lookAt(glm::vec3(0.0f, -2.0f, 3.0f), glm::vec3(0.0, 0.0, 0.3f), glm::vec3(0.0f, 0.0f, 1.0f));
+    glm::mat4 modelView = view * objectTransform.get();
+    program->setUniform("u_modelView", glm::value_ptr(modelView));
+
+    double farClip = view::farClipRatio * state::lengthScale;
+    double nearClip = view::nearClipRatio * state::lengthScale;
+    double fovRad = glm::radians(view::fov);
+    double aspectRatio = 1.0;
+    //glm::mat4 projMatrix = glm::perspective(fovRad, aspectRatio, nearClip, farClip);
+
+    glm::mat4 projMatrix = glm::ortho(-0.7f, 0.7f, -0.7f, 0.7f, -100.0f, 100.0f);
+
+    program->setUniform("u_projMatrix", glm::value_ptr(projMatrix));
+
+    setSurfaceMeshUniforms(*program);
+    program->setUniform("u_baseColor", getSurfaceColor());
+
+    program->draw();
+  }
+
+  // Draw the quantities
+  for (auto& x : quantities) {
+    x.second->draw();
+  }
+
+  render::engine->setBackfaceCull(); // return to default setting
+}
+
 void SurfaceMesh::drawPick() {
   if (!isEnabled()) {
     return;
@@ -361,6 +410,28 @@ void SurfaceMesh::drawPick() {
   setStructureUniforms(*pickProgram);
 
   pickProgram->draw();
+
+  render::engine->setBackfaceCull(); // return to default setting
+}
+
+// Added by cyh
+void SurfaceMesh::drawGBuffer() {
+  if (!isEnabled()) {
+    return;
+  }
+
+  render::engine->setBackfaceCull(backFacePolicy.get() == BackFacePolicy::Cull);
+
+  if (gBufferProgram == nullptr) {
+    prepareGBuffer();
+  }
+
+  // Set uniforms
+  setStructureUniforms(*gBufferProgram);
+  glm::mat4 normalMat = glm::mat4(glm::transpose(glm::inverse(glm::mat3(objectTransform.get()))));
+  gBufferProgram->setUniform("u_normalMatrix", glm::value_ptr(normalMat));
+
+  gBufferProgram->draw();
 
   render::engine->setBackfaceCull(); // return to default setting
 }
@@ -503,6 +574,45 @@ void SurfaceMesh::preparePick() {
   if (wantsCullPosition()) {
     pickProgram->setAttribute("a_cullPos", barycenters);
   }
+}
+
+// Added by cyh
+void SurfaceMesh::prepareGBuffer() {
+
+  // Create a new program
+  gBufferProgram = render::engine->requestShader("MESH_GBUFFER", std::vector<std::string>(), render::ShaderReplacementDefaults::Process);
+
+  std::vector<glm::vec3> positions, normals;
+
+  positions.reserve(3 * nFacesTriangulation());
+  normals.reserve(3 * nFacesTriangulation());
+
+  for (size_t iF = 0; iF < nFaces(); iF++) {
+    auto& face = faces[iF];
+    size_t D = face.size();
+
+    // implicitly triangulate from root
+    size_t vRoot = face[0];
+    glm::vec3 pRoot = vertices[vRoot];
+    for (size_t j = 1; (j + 1) < D; j++) {
+      size_t vB = face[j];
+      glm::vec3 pB = vertices[vB];
+      size_t vC = face[(j + 1) % D];
+      glm::vec3 pC = vertices[vC];
+
+      positions.push_back(pRoot);
+      positions.push_back(pB);
+      positions.push_back(pC);
+
+      normals.push_back(vertexNormals[vRoot]);
+      normals.push_back(vertexNormals[vB]);
+      normals.push_back(vertexNormals[vC]);
+    }
+  }
+
+  // Store data in buffers
+  gBufferProgram->setAttribute("a_position", positions);
+  gBufferProgram->setAttribute("a_normal", normals);
 }
 
 std::vector<std::string> SurfaceMesh::addSurfaceMeshRules(std::vector<std::string> initRules, bool withMesh,
