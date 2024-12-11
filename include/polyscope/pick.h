@@ -21,14 +21,6 @@ size_t requestPickBufferRange(Structure* requestingStructure, size_t count);
 // that 0 is the first index as returned from requestPickBufferRange())
 std::pair<Structure*, size_t> evaluatePickQuery(int xPos, int yPos);
 
-// Added by cyh
-// Calculate 3D position corresponding to every pixel
-void updateGBuffer();
-glm::vec3 gBufferQuery(int xPos, int yPos, int index);
-// Calculate pick ID corresponding to every pixel
-void updatePickFramebuffer();
-std::vector<std::pair<Structure*, size_t>> pickQuery(glm::vec2 p1, glm::vec2 p2);
-
 
 // == Stateful picking: track and update a current selection
 

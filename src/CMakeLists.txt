@@ -125,6 +125,8 @@ SET(SRCS
   messages.cpp
   pick.cpp
   widget.cpp
+
+  custom_render_tools.cpp
   
   # Rendering stuff
   render/engine.cpp  
@@ -270,6 +272,8 @@ SET(HEADERS
   ${INCLUDE_ROOT}/volume_mesh.h
   ${INCLUDE_ROOT}/volume_mesh.ipp
   ${INCLUDE_ROOT}/volume_mesh_quantity.h
+
+  ${INCLUDE_ROOT}/custom_render_tools.h
 )
 
 # Create a single library for the project
@@ -293,6 +297,8 @@ target_include_directories(polyscope PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../dep
 target_include_directories(polyscope PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../deps/json/include")
 target_include_directories(polyscope PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../deps/stb")
 target_include_directories(polyscope PRIVATE "${BACKEND_INCLUDE_DIRS}")
+
+target_include_directories(polyscope PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../../../include")
         
 # Link settings
 target_link_libraries(polyscope PUBLIC imgui)

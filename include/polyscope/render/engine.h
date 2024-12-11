@@ -16,7 +16,10 @@
 #include "imgui.h"
 
 // Added by cyh
-#include "../../../include/core/EventSystem.h"
+// This include directive is used to notify the GemCraft event system.
+#include "EventSystem/ApplicationEvent.h"
+#include "EventSystem/KeyEvent.h"
+#include "EventSystem/MouseEvent.h"
 
 namespace polyscope {
 
@@ -119,6 +122,7 @@ public:
 
   // Clear to redraw
   virtual void clear() = 0;
+  virtual void clear(uint32_t location, const glm::vec3& color) = 0;
   glm::vec3 clearColor{1.0, 1.0, 1.0};
   float clearAlpha = 0.0;
   float clearDepth = 1.0;
@@ -415,13 +419,15 @@ public:
   std::shared_ptr<FrameBuffer> pickFramebuffer;
   std::shared_ptr<FrameBuffer> sceneDepthMinFrame;
   std::shared_ptr<FrameBuffer> gBuffer;
-  std::shared_ptr<FrameBuffer> meshDemoBuffer;
+  std::shared_ptr<FrameBuffer> gltfViewerFb;
+  std::shared_ptr<FrameBuffer> meshDemoFb;
 
   // Main buffers for rendering
   // sceneDepthMin is an optional texture copy of the depth buffe used for some effects
   std::shared_ptr<TextureBuffer> sceneColor, sceneColorFinal, sceneDepth, sceneDepthMin;
   std::shared_ptr<RenderBuffer> pickColorBuffer, pickDepthBuffer;
   std::shared_ptr<RenderBuffer> gBufferPositionBuffer, gBufferNormalBuffer, gBufferDepthBuffer;
+  std::shared_ptr<TextureBuffer> gltfViewerBuffer[3], gltfViewerDepth;
   std::shared_ptr<TextureBuffer> meshDemoColor, meshDemoDepth;
 
   // General-use programs used by the engine

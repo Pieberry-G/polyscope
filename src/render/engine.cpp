@@ -584,14 +584,28 @@ void Engine::allocateGlobalBuffersAndPrograms() {
     gBuffer->setDrawBuffers();
   }
 
-  { // Mesh demo buffer
-    meshDemoColor = generateTextureBuffer(TextureFormat::RGBA16F, 128, 128);
-    meshDemoDepth = generateTextureBuffer(TextureFormat::DEPTH24, 128, 128);
+    { // GLTF viewer buffer
+    gltfViewerBuffer[0] = generateTextureBuffer(TextureFormat::RGBA16F, 1024, 1024);
+    gltfViewerBuffer[1] = generateTextureBuffer(TextureFormat::RGBA16F, 1024, 1024);
+    gltfViewerBuffer[2] = generateTextureBuffer(TextureFormat::RGBA16F, 1024, 1024);
+    gltfViewerDepth = generateTextureBuffer(TextureFormat::DEPTH24, 1024, 1024);
 
-    meshDemoBuffer = generateFrameBuffer(128, 128);
-    meshDemoBuffer->addColorBuffer(meshDemoColor);
-    meshDemoBuffer->addDepthBuffer(meshDemoDepth);
-    meshDemoBuffer->setDrawBuffers();
+    gltfViewerFb = generateFrameBuffer(1024, 1024);
+    gltfViewerFb->addColorBuffer(gltfViewerBuffer[0]);
+    gltfViewerFb->addColorBuffer(gltfViewerBuffer[1]);
+    gltfViewerFb->addColorBuffer(gltfViewerBuffer[2]);
+    gltfViewerFb->addDepthBuffer(gltfViewerDepth);
+    gltfViewerFb->setDrawBuffers();
+  }
+
+  { // Mesh demo buffer
+    meshDemoColor = generateTextureBuffer(TextureFormat::RGBA16F, 1024, 1024);
+    meshDemoDepth = generateTextureBuffer(TextureFormat::DEPTH24, 1024, 1024);
+
+    meshDemoFb = generateFrameBuffer(1024, 1024);
+    meshDemoFb->addColorBuffer(meshDemoColor);
+    meshDemoFb->addDepthBuffer(meshDemoDepth);
+    meshDemoFb->setDrawBuffers();
   }
 
   // Make sure all the buffer sizes are up to date

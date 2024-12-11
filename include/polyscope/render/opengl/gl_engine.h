@@ -111,6 +111,7 @@ public:
 
   // Clear to redraw
   void clear() override;
+  void clear(uint32_t location, const glm::vec3& color) override;
 
   // Bind to textures/renderbuffers for output
   void addColorBuffer(std::shared_ptr<RenderBuffer> renderBuffer) override;

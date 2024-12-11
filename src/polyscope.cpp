@@ -9,6 +9,7 @@
 #include "imgui.h"
 
 #include "polyscope/pick.h"
+#include "polyscope/custom_render_tools.h"
 #include "polyscope/render/engine.h"
 #include "polyscope/view.h"
 
@@ -356,8 +357,8 @@ void processInputEvents() {
         std::pair<Structure*, size_t> pickResult = pick::evaluatePickQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y);
         pick::setSelection(pickResult);
         if (pickResult.first && pickResult.first->name == "Ring") {
-          pick::updateGBuffer();
-          state::startPath = pick::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
+          renderTools::updateGBuffer();
+          state::startPath = renderTools::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
           auto& eventCallback = render::engine->getEventCallbackFn();
           GemCraft::AppRenderEvent event("ShowSourcePoint");
           eventCallback(event);
@@ -370,8 +371,8 @@ void processInputEvents() {
             pick::evaluatePickQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y);
         pick::setSelection(pickResult);
         if (pickResult.first && pickResult.first->name == "Ring") {
-          pick::updateGBuffer();
-          state::endPath = pick::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
+          renderTools::updateGBuffer();
+          state::endPath = renderTools::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
           auto& eventCallback = render::engine->getEventCallbackFn();
           GemCraft::AppRenderEvent event("ShowTargetPoint");
           eventCallback(event);
@@ -384,9 +385,9 @@ void processInputEvents() {
         std::pair<Structure*, size_t> pickResult = pick::evaluatePickQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y);
         pick::setSelection(pickResult);
         if (pickResult.first && pickResult.first->name == "Ring") {
-          pick::updateGBuffer();
-          glm::vec3 position = pick::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
-          glm::vec3 normal = pick::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 1);
+          renderTools::updateGBuffer();
+          glm::vec3 position = renderTools::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
+          glm::vec3 normal = renderTools::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 1);
 
           float distance;
           float minThreshold = state::edgeLengthScale * 0.5;
@@ -422,8 +423,8 @@ void processInputEvents() {
           p1.y = std::max(0.0f, p1.y);
           p2.x = std::min((float)view::windowWidth - 1, p2.x);
           p2.y = std::min((float)view::windowHeight - 1, p2.y);
-          pick::updatePickFramebuffer();
-          std::vector<std::pair<Structure*, size_t>> pickFramebufferContent = pick::pickQuery(p1, p2);
+          renderTools::updatePickFramebuffer();
+          std::vector<std::pair<Structure*, size_t>> pickFramebufferContent = renderTools::pickQuery(p1, p2);
 
           int width = p2.x - p1.x + 1;
           int height = p2.y - p1.y + 1;
@@ -638,13 +639,13 @@ auto lastMainLoopIterTime = std::chrono::steady_clock::now();
 
 // Added by cyh
 void renderMeshDemo() {
-  render::FrameBuffer* meshDemoBuffer = render::engine->meshDemoBuffer.get();
+  render::FrameBuffer* meshDemoBuffer = render::engine->meshDemoFb.get();
 
   render::engine->setDepthMode();
   render::engine->setBlendMode();
 
-  meshDemoBuffer->resize(1028, 1028);
-  meshDemoBuffer->setViewport(0, 0, 1028, 1028);
+  meshDemoBuffer->resize(1024, 1024);
+  meshDemoBuffer->setViewport(0, 0, 1024, 1024);
   meshDemoBuffer->clearColor = glm::vec3{0., 0., 0.};
   meshDemoBuffer->clearAlpha = 0.0f;
   if (!meshDemoBuffer->bindForRendering()) return;
@@ -657,7 +658,7 @@ void renderMeshDemo() {
           x.second->drawMeshDemo();
 
           std::vector<glm::vec4> data = render::engine->meshDemoColor->getDataVector4();
-          unsigned char* buffer = new unsigned char[1028 * 1028 * 4];
+          unsigned char* buffer = new unsigned char[1024 * 1024 * 4];
           
           for (size_t i = 0; i < data.size(); ++i) {
             buffer[i * 4 + 0] = static_cast<unsigned char>(data[i].r * 255.0f); // R
@@ -665,7 +666,7 @@ void renderMeshDemo() {
             buffer[i * 4 + 2] = static_cast<unsigned char>(data[i].b * 255.0f); // B
             buffer[i * 4 + 3] = static_cast<unsigned char>(data[i].a * 255.0f); // A
           }
-          saveImage(x.first + ".png", buffer, 1028, 1028, 4);
+          saveImage(x.first + ".png", buffer, 1024, 1024, 4);
       }
     }
   }

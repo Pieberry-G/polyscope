@@ -307,6 +307,10 @@ void GLFrameBuffer::clear() {
   if (!bindForRendering()) return;
 }
 
+void GLFrameBuffer::clear(uint32_t location, const glm::vec3& color) {
+  if (!bindForRendering()) return;
+}
+
 std::array<float, 4> GLFrameBuffer::readFloat4(int xPos, int yPos, int index) {
   // Read from the buffer
   std::array<float, 4> result = {1., 2., 3., 4.};

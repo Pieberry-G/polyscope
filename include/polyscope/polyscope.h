@@ -18,7 +18,7 @@
 #include <unordered_set>
 
 // Added by cyh
-#include "../../../include/Mesh/MeshSubset.h"
+#include "Mesh/MeshSubset.h"
 
 namespace polyscope {
 

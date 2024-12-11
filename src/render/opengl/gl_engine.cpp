@@ -566,6 +566,12 @@ void GLFrameBuffer::clear() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 }
 
+void GLFrameBuffer::clear(uint32_t location, const glm::vec3& color) {
+  if (!bindForRendering()) return;
+
+  glClearBufferfv(GL_COLOR, location, &color[0]);
+}
+
 std::array<float, 4> GLFrameBuffer::readFloat4(int xPos, int yPos, int index) {
 
   // if (colorRenderBuffer == nullptr || colorRenderBuffer->getType() != RenderBufferType::Float4) {
@@ -965,6 +971,12 @@ void GLShaderProgram::setUniform(std::string name, float* val) {
       if (u.location == -1) return;
       if (u.type == DataType::Matrix44Float) {
         glUniformMatrix4fv(u.location, 1, false, val);
+        u.isSet = true;
+      } else if (u.type == DataType::Vector3Float) {
+        glUniform3fv(u.location, 1, val);
+        u.isSet = true;
+      } else if (u.type == DataType::Vector4Float) {
+        glUniform4fv(u.location, 1, val);
         u.isSet = true;
       } else {
         throw std::invalid_argument("Tried to set GLShaderUniform with wrong type");
@@ -2212,6 +2224,7 @@ void GLEngine::populateDefaultShadersAndRules() {
 
   // Added by cyh
   registeredShaderPrograms.insert({"MESH_GBUFFER", {{MESH_GBUFFER_VERT_SHADER, MESH_GBUFFER_FRAG_SHADER}, DrawMode::Triangles}});
+  registeredShaderPrograms.insert({"GLTF_VIEWER", {{GLTF_VIEWER_VERT_SHADER, GLTF_VIEWER_FRAG_SHADER}, DrawMode::IndexedTriangles}});
   registeredShaderPrograms.insert({"SELECTION_BOX", {{SELECTION_BOX_VERT_SHADER, SELECTION_BOX_FRAG_SHADER}, DrawMode::Lines}});
 
   // === Load rules
