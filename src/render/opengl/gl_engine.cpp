@@ -52,6 +52,7 @@ inline GLenum internalFormat(const TextureFormat& x) {
   switch (x) {
     case TextureFormat::RGB8:       return GL_RGB8;
     case TextureFormat::RGBA8:      return GL_RGBA8;
+    case TextureFormat::R32:        return GL_R32I;
     case TextureFormat::RG16F:      return GL_RG16F;
     case TextureFormat::RGB16F:     return GL_RGB16F;
     case TextureFormat::RGBA16F:    return GL_RGBA16F;
@@ -68,6 +69,7 @@ inline GLenum formatF(const TextureFormat& x) {
   switch (x) {
     case TextureFormat::RGB8:       return GL_RGB;
     case TextureFormat::RGBA8:      return GL_RGBA;
+    case TextureFormat::R32:        return GL_RED_INTEGER;
     case TextureFormat::RG16F:      return GL_RG;
     case TextureFormat::RGB16F:     return GL_RGB; 
     case TextureFormat::RGBA16F:    return GL_RGBA;
@@ -84,6 +86,7 @@ inline GLenum type(const TextureFormat& x) {
   switch (x) {
     case TextureFormat::RGB8:       return GL_UNSIGNED_BYTE;
     case TextureFormat::RGBA8:      return GL_UNSIGNED_BYTE;
+    case TextureFormat::R32:        return GL_INT;  // Added by cyh
     case TextureFormat::RG16F:      return GL_HALF_FLOAT;
     case TextureFormat::RGB16F:     return GL_HALF_FLOAT;
     case TextureFormat::RGBA16F:    return GL_HALF_FLOAT;
@@ -262,6 +265,17 @@ GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int sizeX_, uns
   setFilterMode(FilterMode::Nearest);
 }
 
+GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int sizeX_, unsigned int sizeY_, int* data)
+    : TextureBuffer(2, format_, sizeX_, sizeY_) {
+
+  glGenTextures(1, &handle);
+  glBindTexture(GL_TEXTURE_2D, handle);
+  glTexImage2D(GL_TEXTURE_2D, 0, internalFormat(format), sizeX, sizeY, 0, formatF(format), GL_INT, data);
+  checkGLError();
+
+  setFilterMode(FilterMode::Nearest);
+}
+
 GLTextureBuffer::~GLTextureBuffer() { glDeleteTextures(1, &handle); }
 
 void GLTextureBuffer::resize(unsigned int newLen) {
@@ -367,6 +381,20 @@ std::vector<glm::vec4> GLTextureBuffer::getDataVector4() {
 
   bind();
   glGetTexImage(textureType(), 0, formatF(format), GL_FLOAT, static_cast<void*>(&outData.front()));
+  checkGLError();
+
+  return outData;
+}
+
+std::vector<int> GLTextureBuffer::getDataInt() {
+  if (dimension(format) != 1)
+    throw std::runtime_error("called getDataInt on texture which does not have a 1 dimensional format");
+
+  std::vector<int> outData;
+  outData.resize(getTotalSize());
+
+  bind();
+  glGetTexImage(textureType(), 0, formatF(format), GL_INT, static_cast<void*>(&outData.front()));
   checkGLError();
 
   return outData;
@@ -971,12 +999,6 @@ void GLShaderProgram::setUniform(std::string name, float* val) {
       if (u.location == -1) return;
       if (u.type == DataType::Matrix44Float) {
         glUniformMatrix4fv(u.location, 1, false, val);
-        u.isSet = true;
-      } else if (u.type == DataType::Vector3Float) {
-        glUniform3fv(u.location, 1, val);
-        u.isSet = true;
-      } else if (u.type == DataType::Vector4Float) {
-        glUniform4fv(u.location, 1, val);
         u.isSet = true;
       } else {
         throw std::invalid_argument("Tried to set GLShaderUniform with wrong type");
@@ -1819,8 +1841,9 @@ void GLEngine::initialize() {
   }
 #endif
   if (options::verbosity > 0) {
-    std::cout << options::printPrefix << "Backend: openGL3_glfw -- "
-              << "Loaded openGL version: " << glGetString(GL_VERSION) << std::endl;
+    std::cout << options::printPrefix << "Backend: openGL3-glfw" << std::endl;
+    std::cout << options::printPrefix << "Loaded openGL version: " << glGetString(GL_VERSION) << std::endl;
+    std::cout << std::endl;
   }
 
 #ifdef __APPLE__
@@ -2224,7 +2247,7 @@ void GLEngine::populateDefaultShadersAndRules() {
 
   // Added by cyh
   registeredShaderPrograms.insert({"MESH_GBUFFER", {{MESH_GBUFFER_VERT_SHADER, MESH_GBUFFER_FRAG_SHADER}, DrawMode::Triangles}});
-  registeredShaderPrograms.insert({"GLTF_VIEWER", {{GLTF_VIEWER_VERT_SHADER, GLTF_VIEWER_FRAG_SHADER}, DrawMode::IndexedTriangles}});
+  registeredShaderPrograms.insert({"TINY_RENDERER", {{TINY_RENDERER_VERT_SHADER, TINY_RENDERER_FRAG_SHADER}, DrawMode::IndexedTriangles}});
   registeredShaderPrograms.insert({"SELECTION_BOX", {{SELECTION_BOX_VERT_SHADER, SELECTION_BOX_FRAG_SHADER}, DrawMode::Lines}});
 
   // === Load rules

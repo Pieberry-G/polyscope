@@ -22,7 +22,7 @@ std::vector<SlicePlane*> slicePlanes;
 size_t facePickIndStart;
 size_t edgePickIndStart;
 size_t halfedgePickIndStart;
-MeshSubset subset;
+GemCraft::MeshSubset subset;
 std::vector<glm::vec3> strokePosition;
 std::vector<glm::vec3> strokeNormal;
 float edgeLengthScale;

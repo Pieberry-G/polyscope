@@ -585,17 +585,17 @@ void Engine::allocateGlobalBuffersAndPrograms() {
   }
 
     { // GLTF viewer buffer
-    gltfViewerBuffer[0] = generateTextureBuffer(TextureFormat::RGBA16F, 1024, 1024);
-    gltfViewerBuffer[1] = generateTextureBuffer(TextureFormat::RGBA16F, 1024, 1024);
-    gltfViewerBuffer[2] = generateTextureBuffer(TextureFormat::RGBA16F, 1024, 1024);
-    gltfViewerDepth = generateTextureBuffer(TextureFormat::DEPTH24, 1024, 1024);
+    tinyRendererBuffer[0] = generateTextureBuffer(TextureFormat::RGBA16F, 1024, 1024);
+    tinyRendererBuffer[1] = generateTextureBuffer(TextureFormat::RGBA16F, 1024, 1024);
+    tinyRendererBuffer[2] = generateTextureBuffer(TextureFormat::R32, 1024, 1024);
+    tinyRendererDepth = generateTextureBuffer(TextureFormat::DEPTH24, 1024, 1024);
 
-    gltfViewerFb = generateFrameBuffer(1024, 1024);
-    gltfViewerFb->addColorBuffer(gltfViewerBuffer[0]);
-    gltfViewerFb->addColorBuffer(gltfViewerBuffer[1]);
-    gltfViewerFb->addColorBuffer(gltfViewerBuffer[2]);
-    gltfViewerFb->addDepthBuffer(gltfViewerDepth);
-    gltfViewerFb->setDrawBuffers();
+    tinyRendererFb = generateFrameBuffer(1024, 1024);
+    tinyRendererFb->addColorBuffer(tinyRendererBuffer[0]);
+    tinyRendererFb->addColorBuffer(tinyRendererBuffer[1]);
+    tinyRendererFb->addColorBuffer(tinyRendererBuffer[2]);
+    tinyRendererFb->addDepthBuffer(tinyRendererDepth);
+    tinyRendererFb->setDrawBuffers();
   }
 
   { // Mesh demo buffer

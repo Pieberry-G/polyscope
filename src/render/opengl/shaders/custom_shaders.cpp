@@ -79,7 +79,7 @@ R"(
 };
 
 
-const ShaderStageSpecification GLTF_VIEWER_VERT_SHADER = {
+const ShaderStageSpecification TINY_RENDERER_VERT_SHADER = {
 
     ShaderStageType::Vertex,
 
@@ -95,6 +95,7 @@ const ShaderStageSpecification GLTF_VIEWER_VERT_SHADER = {
         {"a_Position", DataType::Vector3Float},
         {"a_Normal", DataType::Vector3Float},
         {"a_TexCoord", DataType::Vector2Float},
+        {"a_FaceID", DataType::Int},
     },
 
     // textures
@@ -107,10 +108,12 @@ R"(
         in vec3 a_Position;
         in vec3 a_Normal;
         in vec2 a_TexCoord;
+        in int a_FaceID;
 
         out vec3 v_Position;
         out vec3 v_WorldNormal;
         out vec2 v_TexCoord;
+        flat out int v_FaceID;
 
         uniform mat4 u_Model;
         uniform mat4 u_View;
@@ -120,14 +123,14 @@ R"(
         {
             gl_Position = u_Projection * u_View * u_Model * vec4(a_Position, 1.0);
 
-            v_Position = a_Position;
             v_WorldNormal = mat3(transpose(inverse(u_Model))) * a_Normal;
             v_TexCoord = a_TexCoord;
+            v_FaceID = a_FaceID;
         }
 )"
 };
 
-const ShaderStageSpecification GLTF_VIEWER_FRAG_SHADER = {
+const ShaderStageSpecification TINY_RENDERER_FRAG_SHADER = {
     
     ShaderStageType::Fragment,
     
@@ -149,13 +152,13 @@ const ShaderStageSpecification GLTF_VIEWER_FRAG_SHADER = {
 R"(
         ${ GLSL_VERSION }$
 
-        in vec3 v_Position;
         in vec3 v_WorldNormal;
         in vec2 v_TexCoord;
+        flat in int v_FaceID;
 
         layout(location = 0) out vec4 o_FragColor;
-        layout(location = 1) out vec4 o_Position;
-        layout(location = 2) out vec4 o_SegMask;
+        layout(location = 1) out vec4 o_SegMask;
+        layout(location = 2) out int o_FaceID;
 
         uniform vec3 u_LightDir;
         uniform vec4 u_BaseColorFactor;
@@ -177,12 +180,15 @@ R"(
             vec3 diffuse = diff * lightColor;
 
             // result
-            vec4 baseColor = u_BaseColorFactor;
+            vec4 baseColor = texture(u_BaseColorTexture, v_TexCoord) * u_BaseColorFactor;
             o_FragColor = clamp(vec4((ambient + diffuse), 1.0) * baseColor, 0.0, 1.0);
 
-            o_Position = vec4(0.0, v_Position.y / 5.0 + 0.5, 0.0, 1.0);
-            o_Position = vec4(0.0, 0.0, v_Position.z / 30.0 + 0.5, 1.0);
+            //o_Position = vec4(0.0, v_Position.y / 5.0 + 0.5, 0.0, 1.0);
+            //o_Position = vec4(0.0, 0.0, v_Position.z / 30.0 + 0.5, 1.0);
+            //o_Position = vec4(v_Position.x, v_Position.y, v_Position.z, 1.0);
+
             o_SegMask = vec4(u_MaskColor, 1.0);
+            o_FaceID = v_FaceID;
         }
 )"
 };

@@ -406,7 +406,7 @@ void processInputEvents() {
       }
 
       // Process selection box
-      if (false && render::engine->isKeyDown('a')) {
+      if (render::engine->isKeyDown('a')) {
         glm::vec2 currPos{io.MousePos.x, io.MousePos.y};
         if (ImGui::IsMouseClicked(0)) {
           state::selectionBox[0] = currPos;
@@ -435,32 +435,32 @@ void processInputEvents() {
                 if (pickResult.second < state::facePickIndStart) {
                   size_t idx = pickResult.second;
                   if (io.KeyShift) {
-                    state::subset.vertices.erase(idx);
+                    state::subset.m_Vertices.erase(idx);
                   } else {
-                    state::subset.vertices.insert(idx);
+                    state::subset.m_Vertices.insert(idx);
                   }
                 } else if (pickResult.second < state::edgePickIndStart) {
                   size_t idx = pickResult.second - state::facePickIndStart;
                   if (io.KeyShift) {
-                    state::subset.faces.erase(idx);
+                    state::subset.m_Faces.erase(idx);
                   } else {
-                    state::subset.faces.insert(idx);
+                    state::subset.m_Faces.insert(idx);
                   }
                 } else if (pickResult.second < state::halfedgePickIndStart) {
                   size_t idx = pickResult.second - state::edgePickIndStart;
-                  std::set<size_t>::iterator it = state::subset.edges.find(idx);
+                  std::set<size_t>::iterator it = state::subset.m_Edges.find(idx);
                   if (io.KeyShift) {
-                    state::subset.edges.erase(idx);
+                    state::subset.m_Edges.erase(idx);
                   } else {
-                    state::subset.edges.insert(idx);
+                    state::subset.m_Edges.insert(idx);
                   }
                 } else if (pickResult.second >= state::halfedgePickIndStart) {
                   size_t idx = pickResult.second - state::halfedgePickIndStart;
-                  std::set<size_t>::iterator it = state::subset.halfedges.find(idx);
+                  std::set<size_t>::iterator it = state::subset.m_Halfedges.find(idx);
                   if (io.KeyShift) {
-                    state::subset.halfedges.erase(idx);
+                    state::subset.m_Halfedges.erase(idx);
                   } else {
-                    state::subset.halfedges.insert(idx);
+                    state::subset.m_Halfedges.insert(idx);
                   }
                 }
               }

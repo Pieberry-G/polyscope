@@ -76,7 +76,7 @@ extern std::vector<std::function<void()>> userCallbacks;
 extern size_t facePickIndStart;
 extern size_t edgePickIndStart;
 extern size_t halfedgePickIndStart;
-extern MeshSubset subset;
+extern GemCraft::MeshSubset subset;
 extern std::vector<glm::vec3> strokePosition;
 extern std::vector<glm::vec3> strokeNormal;
 extern float edgeLengthScale;

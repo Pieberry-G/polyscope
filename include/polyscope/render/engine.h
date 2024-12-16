@@ -41,7 +41,8 @@ enum class DrawMode {
 };
 
 enum class FilterMode { Nearest = 0, Linear };
-enum class TextureFormat { RGB8 = 0, RGBA8, RG16F, RGB16F, RGBA16F, RGBA32F, RGB32F, R32F, R16F, DEPTH24 };
+// R32 - Added by cyh
+enum class TextureFormat { RGB8 = 0, RGBA8, R32, RG16F, RGB16F, RGBA16F, RGBA32F, RGB32F, R32F, R16F, DEPTH24 };
 enum class RenderBufferType { Color, ColorAlpha, Depth, Float4 };
 enum class DepthMode { Less, LEqual, LEqualReadOnly, Greater, Disable };
 enum class BlendMode { Over, AlphaOver, OverNoWrite, Under, Zero, WeightedAdd, Source, Disable };
@@ -76,6 +77,8 @@ public:
   virtual std::vector<glm::vec2> getDataVector2() = 0;
   virtual std::vector<glm::vec3> getDataVector3() = 0;
   virtual std::vector<glm::vec4> getDataVector4() = 0;
+  // Added by cyh
+  virtual std::vector<int> getDataInt() = 0;
 
   // Set texture data
   // void fillTextureData1D(std::string name, unsigned char* texData, unsigned int length);
@@ -419,7 +422,7 @@ public:
   std::shared_ptr<FrameBuffer> pickFramebuffer;
   std::shared_ptr<FrameBuffer> sceneDepthMinFrame;
   std::shared_ptr<FrameBuffer> gBuffer;
-  std::shared_ptr<FrameBuffer> gltfViewerFb;
+  std::shared_ptr<FrameBuffer> tinyRendererFb;
   std::shared_ptr<FrameBuffer> meshDemoFb;
 
   // Main buffers for rendering
@@ -427,7 +430,7 @@ public:
   std::shared_ptr<TextureBuffer> sceneColor, sceneColorFinal, sceneDepth, sceneDepthMin;
   std::shared_ptr<RenderBuffer> pickColorBuffer, pickDepthBuffer;
   std::shared_ptr<RenderBuffer> gBufferPositionBuffer, gBufferNormalBuffer, gBufferDepthBuffer;
-  std::shared_ptr<TextureBuffer> gltfViewerBuffer[3], gltfViewerDepth;
+  std::shared_ptr<TextureBuffer> tinyRendererBuffer[3], tinyRendererDepth;
   std::shared_ptr<TextureBuffer> meshDemoColor, meshDemoDepth;
 
   // General-use programs used by the engine

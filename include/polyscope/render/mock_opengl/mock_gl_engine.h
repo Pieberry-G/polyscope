@@ -22,6 +22,8 @@ public:
   // create a 2D texture from data
   GLTextureBuffer(TextureFormat format, unsigned int sizeX_, unsigned int sizeY_, unsigned char* data = nullptr);
   GLTextureBuffer(TextureFormat format, unsigned int sizeX_, unsigned int sizeY_, float* data);
+  // Added by cyh
+  GLTextureBuffer(TextureFormat format, unsigned int sizeX_, unsigned int sizeY_, int* data);
 
   ~GLTextureBuffer() override;
 
@@ -37,6 +39,8 @@ public:
   std::vector<glm::vec2> getDataVector2() override;
   std::vector<glm::vec3> getDataVector3() override;
   std::vector<glm::vec4> getDataVector4() override;
+  // Added by cyh
+  std::vector<int> getDataInt() override;
 
   void bind();
 

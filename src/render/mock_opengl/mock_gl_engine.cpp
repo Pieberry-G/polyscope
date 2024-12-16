@@ -82,6 +82,14 @@ GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int sizeX_, uns
   setFilterMode(FilterMode::Nearest);
 }
 
+GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int sizeX_, unsigned int sizeY_, int* data)
+    : TextureBuffer(2, format_, sizeX_, sizeY_) {
+
+  checkGLError();
+
+  setFilterMode(FilterMode::Nearest);
+}
+
 GLTextureBuffer::~GLTextureBuffer() {}
 
 void GLTextureBuffer::resize(unsigned int newLen) {
@@ -172,6 +180,15 @@ std::vector<glm::vec4> GLTextureBuffer::getDataVector4() {
   throw std::runtime_error("not implemented");
 
   std::vector<glm::vec4> outData;
+  outData.resize(getSizeX() * getSizeY());
+
+  return outData;
+}
+
+std::vector<int> GLTextureBuffer::getDataInt() {
+  if (dimension(format) != 1)
+    throw std::runtime_error("called getDataInt on texture which does not have a 1 dimensional format");
+  std::vector<int> outData;
   outData.resize(getSizeX() * getSizeY());
 
   return outData;
