@@ -95,7 +95,7 @@ const ShaderStageSpecification TINY_RENDERER_VERT_SHADER = {
         {"a_Position", DataType::Vector3Float},
         {"a_Normal", DataType::Vector3Float},
         {"a_TexCoord", DataType::Vector2Float},
-        {"a_FaceID", DataType::Int},
+        {"a_FaceID", DataType::Float},
     },
 
     // textures
@@ -108,12 +108,12 @@ R"(
         in vec3 a_Position;
         in vec3 a_Normal;
         in vec2 a_TexCoord;
-        in int a_FaceID;
+        in float a_FaceID;
 
         out vec3 v_Position;
         out vec3 v_WorldNormal;
         out vec2 v_TexCoord;
-        flat out int v_FaceID;
+        out float v_FaceID;
 
         uniform mat4 u_Model;
         uniform mat4 u_View;
@@ -154,11 +154,11 @@ R"(
 
         in vec3 v_WorldNormal;
         in vec2 v_TexCoord;
-        flat in int v_FaceID;
+        in float v_FaceID;
 
         layout(location = 0) out vec4 o_FragColor;
         layout(location = 1) out vec4 o_SegMask;
-        layout(location = 2) out int o_FaceID;
+        layout(location = 2) out vec4 o_FaceID;
 
         uniform vec3 u_LightDir;
         uniform vec4 u_BaseColorFactor;
@@ -188,7 +188,7 @@ R"(
             //o_Position = vec4(v_Position.x, v_Position.y, v_Position.z, 1.0);
 
             o_SegMask = vec4(u_MaskColor, 1.0);
-            o_FaceID = v_FaceID;
+            o_FaceID = vec4(v_FaceID, 1.0, 1.0, 1.0);
         }
 )"
 };

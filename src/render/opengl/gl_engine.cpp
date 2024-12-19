@@ -1843,7 +1843,6 @@ void GLEngine::initialize() {
   if (options::verbosity > 0) {
     std::cout << options::printPrefix << "Backend: openGL3-glfw" << std::endl;
     std::cout << options::printPrefix << "Loaded openGL version: " << glGetString(GL_VERSION) << std::endl;
-    std::cout << std::endl;
   }
 
 #ifdef __APPLE__

@@ -587,7 +587,7 @@ void Engine::allocateGlobalBuffersAndPrograms() {
     { // GLTF viewer buffer
     tinyRendererBuffer[0] = generateTextureBuffer(TextureFormat::RGBA16F, 1024, 1024);
     tinyRendererBuffer[1] = generateTextureBuffer(TextureFormat::RGBA16F, 1024, 1024);
-    tinyRendererBuffer[2] = generateTextureBuffer(TextureFormat::R32, 1024, 1024);
+    tinyRendererBuffer[2] = generateTextureBuffer(TextureFormat::RGBA32F, 1024, 1024);
     tinyRendererDepth = generateTextureBuffer(TextureFormat::DEPTH24, 1024, 1024);
 
     tinyRendererFb = generateFrameBuffer(1024, 1024);
