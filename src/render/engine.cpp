@@ -573,20 +573,22 @@ void Engine::allocateGlobalBuffersAndPrograms() {
   }
 
   { // Geometry buffer
-    gBufferPositionBuffer = generateRenderBuffer(RenderBufferType::Float4, view::bufferWidth, view::bufferHeight);
-    gBufferNormalBuffer = generateRenderBuffer(RenderBufferType::Float4, view::bufferWidth, view::bufferHeight);
-    gBufferDepthBuffer = generateRenderBuffer(RenderBufferType::Depth, view::bufferWidth, view::bufferHeight);
+    gBufferPositionBuffer = generateTextureBuffer(TextureFormat::RGBA32F, view::bufferWidth, view::bufferHeight);
+    gBufferNormalBuffer = generateTextureBuffer(TextureFormat::RGBA32F, view::bufferWidth, view::bufferHeight);
+    gBufferFaceIDBuffer = generateTextureBuffer(TextureFormat::RGBA32F, view::bufferWidth, view::bufferHeight);
+    gBufferDepthBuffer = generateTextureBuffer(TextureFormat::DEPTH24, view::bufferWidth, view::bufferHeight);
 
     gBuffer = generateFrameBuffer(view::bufferWidth, view::bufferHeight);
     gBuffer->addColorBuffer(gBufferPositionBuffer);
     gBuffer->addColorBuffer(gBufferNormalBuffer);
+    gBuffer->addColorBuffer(gBufferFaceIDBuffer);
     gBuffer->addDepthBuffer(gBufferDepthBuffer);
     gBuffer->setDrawBuffers();
   }
 
-    { // GLTF viewer buffer
-    tinyRendererBuffer[0] = generateTextureBuffer(TextureFormat::RGBA16F, 1024, 1024);
-    tinyRendererBuffer[1] = generateTextureBuffer(TextureFormat::RGBA16F, 1024, 1024);
+  { // GLTF viewer buffer
+    tinyRendererBuffer[0] = generateTextureBuffer(TextureFormat::RGBA32F, 1024, 1024);
+    tinyRendererBuffer[1] = generateTextureBuffer(TextureFormat::RGBA32F, 1024, 1024);
     tinyRendererBuffer[2] = generateTextureBuffer(TextureFormat::RGBA32F, 1024, 1024);
     tinyRendererDepth = generateTextureBuffer(TextureFormat::DEPTH24, 1024, 1024);
 
@@ -599,7 +601,7 @@ void Engine::allocateGlobalBuffersAndPrograms() {
   }
 
   { // Mesh demo buffer
-    meshDemoColor = generateTextureBuffer(TextureFormat::RGBA16F, 1024, 1024);
+    meshDemoColor = generateTextureBuffer(TextureFormat::RGBA32F, 1024, 1024);
     meshDemoDepth = generateTextureBuffer(TextureFormat::DEPTH24, 1024, 1024);
 
     meshDemoFb = generateFrameBuffer(1024, 1024);

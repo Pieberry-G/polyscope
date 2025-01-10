@@ -3,7 +3,7 @@
 #include "polyscope/pick.h"
 
 namespace polyscope {
-namespace renderTools {
+namespace customRenderTools {
 
 void updateGBuffer() {
 
@@ -17,6 +17,7 @@ void updateGBuffer() {
   gBuffer->clearColor = glm::vec3{0., 0., 0.};
   if (!gBuffer->bindForRendering()) return;
   gBuffer->clear();
+  gBuffer->clear(2, {-1.0f, -1.0f, -1.0f});
 
   // Render pos buffer
   for (auto cat : state::structures) {
@@ -26,7 +27,7 @@ void updateGBuffer() {
   }
 }
 
-// Index 0 is Position, and index 1 is Normal
+// Index 0 is Position, index 1 is Normal, and index 2 is FaceID
 glm::vec3 gBufferQuery(int xPos, int yPos, int index) {
 
   // NOTE: hack used for debugging: if xPos == yPos == 1 we do a pick render but do not query the value.

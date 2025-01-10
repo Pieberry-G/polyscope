@@ -52,7 +52,6 @@ inline GLenum internalFormat(const TextureFormat& x) {
   switch (x) {
     case TextureFormat::RGB8:       return GL_RGB8;
     case TextureFormat::RGBA8:      return GL_RGBA8;
-    case TextureFormat::R32:        return GL_R32I;
     case TextureFormat::RG16F:      return GL_RG16F;
     case TextureFormat::RGB16F:     return GL_RGB16F;
     case TextureFormat::RGBA16F:    return GL_RGBA16F;
@@ -69,7 +68,6 @@ inline GLenum formatF(const TextureFormat& x) {
   switch (x) {
     case TextureFormat::RGB8:       return GL_RGB;
     case TextureFormat::RGBA8:      return GL_RGBA;
-    case TextureFormat::R32:        return GL_RED_INTEGER;
     case TextureFormat::RG16F:      return GL_RG;
     case TextureFormat::RGB16F:     return GL_RGB; 
     case TextureFormat::RGBA16F:    return GL_RGBA;
@@ -86,7 +84,6 @@ inline GLenum type(const TextureFormat& x) {
   switch (x) {
     case TextureFormat::RGB8:       return GL_UNSIGNED_BYTE;
     case TextureFormat::RGBA8:      return GL_UNSIGNED_BYTE;
-    case TextureFormat::R32:        return GL_INT;  // Added by cyh
     case TextureFormat::RG16F:      return GL_HALF_FLOAT;
     case TextureFormat::RGB16F:     return GL_HALF_FLOAT;
     case TextureFormat::RGBA16F:    return GL_HALF_FLOAT;

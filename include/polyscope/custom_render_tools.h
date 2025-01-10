@@ -4,7 +4,7 @@
 #include "polyscope/structure.h"
 
 namespace polyscope {
-namespace renderTools {
+namespace customRenderTools {
 
 // Added by cyh
 // Calculate 3D position corresponding to every pixel

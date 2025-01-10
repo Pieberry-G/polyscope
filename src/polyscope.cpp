@@ -357,8 +357,8 @@ void processInputEvents() {
         std::pair<Structure*, size_t> pickResult = pick::evaluatePickQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y);
         pick::setSelection(pickResult);
         if (pickResult.first && pickResult.first->name == "Ring") {
-          renderTools::updateGBuffer();
-          state::startPath = renderTools::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
+          customRenderTools::updateGBuffer();
+          state::startPath = customRenderTools::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
           auto& eventCallback = render::engine->getEventCallbackFn();
           GemCraft::AppRenderEvent event("ShowSourcePoint");
           eventCallback(event);
@@ -371,8 +371,8 @@ void processInputEvents() {
             pick::evaluatePickQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y);
         pick::setSelection(pickResult);
         if (pickResult.first && pickResult.first->name == "Ring") {
-          renderTools::updateGBuffer();
-          state::endPath = renderTools::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
+          customRenderTools::updateGBuffer();
+          state::endPath = customRenderTools::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
           auto& eventCallback = render::engine->getEventCallbackFn();
           GemCraft::AppRenderEvent event("ShowTargetPoint");
           eventCallback(event);
@@ -380,14 +380,14 @@ void processInputEvents() {
       }
 
       // Process strokeline
-      if (render::engine->isKeyDown('q') && dragLeft) {
+      if (false && render::engine->isKeyDown('q') && dragLeft) {
         ImVec2 p = ImGui::GetMousePos();
         std::pair<Structure*, size_t> pickResult = pick::evaluatePickQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y);
         pick::setSelection(pickResult);
         if (pickResult.first && pickResult.first->name == "Ring") {
-          renderTools::updateGBuffer();
-          glm::vec3 position = renderTools::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
-          glm::vec3 normal = renderTools::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 1);
+          customRenderTools::updateGBuffer();
+          glm::vec3 position = customRenderTools::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
+          glm::vec3 normal = customRenderTools::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 1);
 
           float distance;
           float minThreshold = state::edgeLengthScale * 0.5;
@@ -405,11 +405,45 @@ void processInputEvents() {
         }
       }
 
+      // Process selection brush
+      if (render::engine->isKeyDown('s') && dragLeft) {
+        ImVec2 p = ImGui::GetMousePos();
+        std::pair<Structure*, size_t> pickResult = pick::evaluatePickQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y);
+        pick::setSelection(pickResult);
+        if (pickResult.first && pickResult.first->name == "Ring") {
+          std::vector<glm::vec4> data;
+          customRenderTools::updateGBuffer();
+          data = polyscope::render::engine->gBufferFaceIDBuffer->getDataVector4();
+          for (int i = -20; i <= 20; i++) {
+            for (int j = -20; j <= 20; j++) {
+              if (p.y + i >= 0 && p.y + i < view::bufferHeight && p.x + j >= 0 && p.x + j < view::bufferWidth && i * i + j * j <= 20 * 20) {
+                float faceIDFromBuffer =
+                    data[(view::bufferHeight - io.DisplayFramebufferScale.y * (p.y + i)) * view::bufferWidth +
+                         io.DisplayFramebufferScale.x * (p.x + j)]
+                        .x;
+                if (faceIDFromBuffer + 1.0f >= 1e-6f) {
+                  size_t faceID = static_cast<size_t>(std::round(faceIDFromBuffer));
+                  if (io.KeyShift) {
+                    state::selectedRegion.Faces().erase(faceID);
+                  } else {
+                    state::selectedRegion.Faces().insert(faceID);
+                  }
+                }
+              }
+            }
+          }
+          auto& eventCallback = render::engine->getEventCallbackFn();
+          GemCraft::AppRenderEvent event("ShowSelectedRegion");
+          eventCallback(event);
+        }
+      }
+
       // Process selection box
       if (render::engine->isKeyDown('a')) {
-        glm::vec2 currPos{io.MousePos.x, io.MousePos.y};
+        glm::vec2 currPos{ImGui::GetMousePos().x, ImGui::GetMousePos().y};
         if (ImGui::IsMouseClicked(0)) {
           state::selectionBox[0] = currPos;
+          state::selectionBox[1] = currPos;
         } 
         if (ImGui::IsMouseDragging(0)) {
           state::selectionBox[1] = currPos;
@@ -421,53 +455,29 @@ void processInputEvents() {
           if (p1.y > p2.y) std::swap(p1.y, p2.y);
           p1.x = std::max(0.0f, p1.x);
           p1.y = std::max(0.0f, p1.y);
-          p2.x = std::min((float)view::windowWidth - 1, p2.x);
-          p2.y = std::min((float)view::windowHeight - 1, p2.y);
-          renderTools::updatePickFramebuffer();
-          std::vector<std::pair<Structure*, size_t>> pickFramebufferContent = renderTools::pickQuery(p1, p2);
+          p2.x = std::min((float)view::windowWidth - 1.0f, p2.x);
+          p2.y = std::min((float)view::windowHeight - 1.0f, p2.y);
 
+          std::vector<glm::vec4> data;
+          customRenderTools::updateGBuffer();
+          data = polyscope::render::engine->gBufferFaceIDBuffer->getDataVector4();
           int width = p2.x - p1.x + 1;
           int height = p2.y - p1.y + 1;
           for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
-              std::pair<Structure*, size_t> pickResult = pickFramebufferContent[i * width + j];
-              if (pickResult.first != nullptr) {
-                if (pickResult.second < state::facePickIndStart) {
-                  size_t idx = pickResult.second;
-                  if (io.KeyShift) {
-                    state::subset.m_Vertices.erase(idx);
-                  } else {
-                    state::subset.m_Vertices.insert(idx);
-                  }
-                } else if (pickResult.second < state::edgePickIndStart) {
-                  size_t idx = pickResult.second - state::facePickIndStart;
-                  if (io.KeyShift) {
-                    state::subset.m_Faces.erase(idx);
-                  } else {
-                    state::subset.m_Faces.insert(idx);
-                  }
-                } else if (pickResult.second < state::halfedgePickIndStart) {
-                  size_t idx = pickResult.second - state::edgePickIndStart;
-                  std::set<size_t>::iterator it = state::subset.m_Edges.find(idx);
-                  if (io.KeyShift) {
-                    state::subset.m_Edges.erase(idx);
-                  } else {
-                    state::subset.m_Edges.insert(idx);
-                  }
-                } else if (pickResult.second >= state::halfedgePickIndStart) {
-                  size_t idx = pickResult.second - state::halfedgePickIndStart;
-                  std::set<size_t>::iterator it = state::subset.m_Halfedges.find(idx);
-                  if (io.KeyShift) {
-                    state::subset.m_Halfedges.erase(idx);
-                  } else {
-                    state::subset.m_Halfedges.insert(idx);
-                  }
+              float faceIDFromBuffer = data[(view::bufferHeight - io.DisplayFramebufferScale.y * (p1.y + i)) * view::bufferWidth + io.DisplayFramebufferScale.x * (p1.x + j)].x;
+              if (faceIDFromBuffer + 1.0f >= 1e-6f) {
+                size_t faceID = static_cast<size_t>(std::round(faceIDFromBuffer));
+                if (io.KeyShift) {
+                  state::selectedRegion.Faces().erase(faceID);
+                } else {
+                  state::selectedRegion.Faces().insert(faceID);
                 }
               }
             }
           }
           auto& eventCallback = render::engine->getEventCallbackFn();
-          GemCraft::AppRenderEvent event("ShowRingSelected");
+          GemCraft::AppRenderEvent event("ShowSelectedRegion");
           eventCallback(event);
           state::selectionBox[0] = glm::vec2(-1, -1);
           state::selectionBox[1] = glm::vec2(-1, -1);
@@ -892,7 +902,7 @@ void draw(bool withUI, bool withContextCallback) {
       if (options::buildGui) {
         buildPolyscopeGui();
         buildStructureGui();
-        buildPickGui();
+        //buildPickGui();
 
         for (Widget* w : state::widgets) {
           w->buildGUI();

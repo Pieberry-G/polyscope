@@ -41,8 +41,7 @@ enum class DrawMode {
 };
 
 enum class FilterMode { Nearest = 0, Linear };
-// R32 - Added by cyh
-enum class TextureFormat { RGB8 = 0, RGBA8, R32, RG16F, RGB16F, RGBA16F, RGBA32F, RGB32F, R32F, R16F, DEPTH24 };
+enum class TextureFormat { RGB8 = 0, RGBA8, RG16F, RGB16F, RGBA16F, RGBA32F, RGB32F, R32F, R16F, DEPTH24 };
 enum class RenderBufferType { Color, ColorAlpha, Depth, Float4 };
 enum class DepthMode { Less, LEqual, LEqualReadOnly, Greater, Disable };
 enum class BlendMode { Over, AlphaOver, OverNoWrite, Under, Zero, WeightedAdd, Source, Disable };
@@ -421,6 +420,7 @@ public:
   std::shared_ptr<FrameBuffer> sceneBuffer, sceneBufferFinal;
   std::shared_ptr<FrameBuffer> pickFramebuffer;
   std::shared_ptr<FrameBuffer> sceneDepthMinFrame;
+
   std::shared_ptr<FrameBuffer> gBuffer;
   std::shared_ptr<FrameBuffer> tinyRendererFb;
   std::shared_ptr<FrameBuffer> meshDemoFb;
@@ -429,7 +429,8 @@ public:
   // sceneDepthMin is an optional texture copy of the depth buffe used for some effects
   std::shared_ptr<TextureBuffer> sceneColor, sceneColorFinal, sceneDepth, sceneDepthMin;
   std::shared_ptr<RenderBuffer> pickColorBuffer, pickDepthBuffer;
-  std::shared_ptr<RenderBuffer> gBufferPositionBuffer, gBufferNormalBuffer, gBufferDepthBuffer;
+
+  std::shared_ptr<TextureBuffer> gBufferPositionBuffer, gBufferNormalBuffer, gBufferFaceIDBuffer, gBufferDepthBuffer;
   std::shared_ptr<TextureBuffer> tinyRendererBuffer[3], tinyRendererDepth;
   std::shared_ptr<TextureBuffer> meshDemoColor, meshDemoDepth;
 

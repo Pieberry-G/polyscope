@@ -583,9 +583,11 @@ void SurfaceMesh::prepareGBuffer() {
   gBufferProgram = render::engine->requestShader("MESH_GBUFFER", std::vector<std::string>(), render::ShaderReplacementDefaults::Process);
 
   std::vector<glm::vec3> positions, normals;
+  std::vector<double> faceIDs;
 
   positions.reserve(3 * nFacesTriangulation());
   normals.reserve(3 * nFacesTriangulation());
+  faceIDs.reserve(3 * nFacesTriangulation());
 
   for (size_t iF = 0; iF < nFaces(); iF++) {
     auto& face = faces[iF];
@@ -607,12 +609,17 @@ void SurfaceMesh::prepareGBuffer() {
       normals.push_back(vertexNormals[vRoot]);
       normals.push_back(vertexNormals[vB]);
       normals.push_back(vertexNormals[vC]);
+
+      faceIDs.push_back(iF);
+      faceIDs.push_back(iF);
+      faceIDs.push_back(iF);
     }
   }
 
   // Store data in buffers
   gBufferProgram->setAttribute("a_position", positions);
   gBufferProgram->setAttribute("a_normal", normals);
+  gBufferProgram->setAttribute("a_faceID", faceIDs);
 }
 
 std::vector<std::string> SurfaceMesh::addSurfaceMeshRules(std::vector<std::string> initRules, bool withMesh,

@@ -22,6 +22,7 @@ const ShaderStageSpecification MESH_GBUFFER_VERT_SHADER = {
     {
         {"a_position", DataType::Vector3Float},
         {"a_normal", DataType::Vector3Float},
+        {"a_faceID", DataType::Float},
     },
 
     // textures
@@ -31,19 +32,24 @@ const ShaderStageSpecification MESH_GBUFFER_VERT_SHADER = {
 R"(
         ${ GLSL_VERSION }$
 
+        in vec3 a_position;
+        in vec3 a_normal;
+        in float a_faceID;
+
+        out vec3 v_position;
+        out vec3 v_normal;
+        out float v_faceID;
+
         uniform mat4 u_modelView;
         uniform mat4 u_projMatrix;
         uniform mat4 u_normalMatrix;
-        in vec3 a_position;
-        in vec3 a_normal;
-        out vec3 v_position;
-        out vec3 v_normal;
         
         void main()
         {
             gl_Position = u_projMatrix * u_modelView * vec4(a_position, 1.0);
             v_position = a_position;
             v_normal = a_normal;
+            v_faceID = a_faceID;
         }
 )"
 };
@@ -67,13 +73,16 @@ R"(
 
         in vec3 v_position;
         in vec3 v_normal;
+        in float v_faceID;
         layout(location = 0) out vec4 o_position;
         layout(location = 1) out vec4 o_normal;
+        layout(location = 2) out vec4 o_faceID;
 
         void main()
         {
             o_position = vec4(v_position, 1.0);
             o_normal = vec4(normalize(v_normal), 1.0);
+            o_faceID = vec4(v_faceID, 1.0, 1.0, 1.0);
         }
 )"
 };
@@ -85,17 +94,17 @@ const ShaderStageSpecification TINY_RENDERER_VERT_SHADER = {
 
     // uniforms
     {
-        {"u_Model", DataType::Matrix44Float},
-        {"u_View", DataType::Matrix44Float},
-        {"u_Projection", DataType::Matrix44Float},
+        {"u_model", DataType::Matrix44Float},
+        {"u_view", DataType::Matrix44Float},
+        {"u_projection", DataType::Matrix44Float},
     }, 
 
     // attributes
     {
-        {"a_Position", DataType::Vector3Float},
-        {"a_Normal", DataType::Vector3Float},
-        {"a_TexCoord", DataType::Vector2Float},
-        {"a_FaceID", DataType::Float},
+        {"a_position", DataType::Vector3Float},
+        {"a_normal", DataType::Vector3Float},
+        {"a_texcoord", DataType::Vector2Float},
+        {"a_faceID", DataType::Float},
     },
 
     // textures
@@ -105,27 +114,27 @@ const ShaderStageSpecification TINY_RENDERER_VERT_SHADER = {
 R"(
         ${ GLSL_VERSION }$
 
-        in vec3 a_Position;
-        in vec3 a_Normal;
-        in vec2 a_TexCoord;
-        in float a_FaceID;
+        in vec3 a_position;
+        in vec3 a_normal;
+        in vec2 a_texcoord;
+        in float a_faceID;
 
-        out vec3 v_Position;
-        out vec3 v_WorldNormal;
-        out vec2 v_TexCoord;
-        out float v_FaceID;
+        out vec3 v_position;
+        out vec3 v_worldNormal;
+        out vec2 v_texcoord;
+        out float v_faceID;
 
-        uniform mat4 u_Model;
-        uniform mat4 u_View;
-        uniform mat4 u_Projection;
+        uniform mat4 u_model;
+        uniform mat4 u_view;
+        uniform mat4 u_projection;
  
         void main()
         {
-            gl_Position = u_Projection * u_View * u_Model * vec4(a_Position, 1.0);
+            gl_Position = u_projection * u_view * u_model * vec4(a_position, 1.0);
 
-            v_WorldNormal = mat3(transpose(inverse(u_Model))) * a_Normal;
-            v_TexCoord = a_TexCoord;
-            v_FaceID = a_FaceID;
+            v_worldNormal = mat3(transpose(inverse(u_model))) * a_normal;
+            v_texcoord = a_texcoord;
+            v_faceID = a_faceID;
         }
 )"
 };
@@ -136,10 +145,10 @@ const ShaderStageSpecification TINY_RENDERER_FRAG_SHADER = {
     
     // uniforms
     {
-        {"u_LightDir", DataType::Vector3Float},
-        {"u_BaseColorFactor", DataType::Vector4Float},
-        {"u_BaseColorTexture", DataType::Int},
-        {"u_MaskColor", DataType::Vector3Float},
+        {"u_lightDir", DataType::Vector3Float},
+        {"u_baseColorFactor", DataType::Vector4Float},
+        {"u_baseColorTexture", DataType::Int},
+        {"u_maskColor", DataType::Vector3Float},
     }, 
 
     // attributes
@@ -152,18 +161,18 @@ const ShaderStageSpecification TINY_RENDERER_FRAG_SHADER = {
 R"(
         ${ GLSL_VERSION }$
 
-        in vec3 v_WorldNormal;
-        in vec2 v_TexCoord;
-        in float v_FaceID;
+        in vec3 v_worldNormal;
+        in vec2 v_texcoord;
+        in float v_faceID;
 
-        layout(location = 0) out vec4 o_FragColor;
-        layout(location = 1) out vec4 o_SegMask;
-        layout(location = 2) out vec4 o_FaceID;
+        layout(location = 0) out vec4 o_fragColor;
+        layout(location = 1) out vec4 o_segMask;
+        layout(location = 2) out vec4 o_faceID;
 
-        uniform vec3 u_LightDir;
-        uniform vec4 u_BaseColorFactor;
-        uniform sampler2D u_BaseColorTexture;
-        uniform vec3 u_MaskColor;
+        uniform vec3 u_lightDir;
+        uniform vec4 u_baseColorFactor;
+        uniform sampler2D u_baseColorTexture;
+        uniform vec3 u_maskColor;
 
         const vec3 lightColor = vec3(1.0, 1.0, 1.0);
 
@@ -174,21 +183,21 @@ R"(
             vec3 ambient = lightColor * ambientStrength;
 
             // diffuse
-            vec3 norm = normalize(v_WorldNormal);
-            vec3 lightDir = -normalize(u_LightDir);
+            vec3 norm = normalize(v_worldNormal);
+            vec3 lightDir = -normalize(u_lightDir);
             float diff = max(dot(norm, lightDir), 0.0);
             vec3 diffuse = diff * lightColor;
 
             // result
-            vec4 baseColor = texture(u_BaseColorTexture, v_TexCoord) * u_BaseColorFactor;
-            o_FragColor = clamp(vec4((ambient + diffuse), 1.0) * baseColor, 0.0, 1.0);
+            vec4 baseColor = texture(u_baseColorTexture, v_texcoord) * u_baseColorFactor;
+            o_fragColor = clamp(vec4((ambient + diffuse), 1.0) * baseColor, 0.0, 1.0);
 
-            //o_Position = vec4(0.0, v_Position.y / 5.0 + 0.5, 0.0, 1.0);
-            //o_Position = vec4(0.0, 0.0, v_Position.z / 30.0 + 0.5, 1.0);
-            //o_Position = vec4(v_Position.x, v_Position.y, v_Position.z, 1.0);
+            //o_position = vec4(0.0, v_position.y / 5.0 + 0.5, 0.0, 1.0);
+            //o_position = vec4(0.0, 0.0, v_position.z / 30.0 + 0.5, 1.0);
+            //o_position = vec4(v_position.x, v_position.y, v_position.z, 1.0);
 
-            o_SegMask = vec4(u_MaskColor, 1.0);
-            o_FaceID = vec4(v_FaceID, 1.0, 1.0, 1.0);
+            o_segMask = vec4(u_maskColor, 1.0);
+            o_faceID = vec4(v_faceID, 1.0, 1.0, 1.0);
         }
 )"
 };
