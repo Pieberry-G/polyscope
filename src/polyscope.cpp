@@ -902,7 +902,7 @@ void draw(bool withUI, bool withContextCallback) {
       if (options::buildGui) {
         buildPolyscopeGui();
         buildStructureGui();
-        //buildPickGui();
+        buildPickGui();
 
         for (Widget* w : state::widgets) {
           w->buildGUI();
