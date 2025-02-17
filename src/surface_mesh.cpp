@@ -367,7 +367,7 @@ void SurfaceMesh::drawMeshDemo() {
     setStructureUniforms(*program);
 
     //glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 3.0f, -2.0f), glm::vec3(0.0, 0.8, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 view = glm::lookAt(glm::vec3(0.0f, -2.0f, 3.0f), glm::vec3(0.0, 0.0, 0.3f), glm::vec3(0.0f, 0.0f, 1.0f));
+    glm::mat4 view = glm::lookAt(glm::vec3(0.0f, -2.0f, 3.0f), glm::vec3(0.0, 0.0, -0.3f), glm::vec3(0.0f, 0.0f, 1.0f));
     glm::mat4 modelView = view * objectTransform.get();
     program->setUniform("u_modelView", glm::value_ptr(modelView));
 
