@@ -89,6 +89,7 @@ extern bool openImGuiWindowForUserCallback;
 // Polyscope runs). By default, this is set to invoke `configureImGuiStyle()` from Polyscope's imgui_config.cpp, but you
 // may assign your own function to create custom styles. If this callback is null, the default ImGui style will be used.
 extern std::function<void()> configureImGuiStyleCallback;
+extern std::string themeColor;
 
 // A callback function which will be invoked exactly once during initialization to construct a font atlas for ImGui to
 // use. The callback should return a tuple of three pointers: a newly created global shared font atlas, a regular font,

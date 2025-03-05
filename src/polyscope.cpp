@@ -77,6 +77,10 @@ void readPrefsFile() {
         int val = prefsJSON["windowPosY"];
         if (val >= 0 && val < 10000) view::initWindowPosY = val;
       }
+      if (prefsJSON.count("themeColor") > 0) {
+        std::string val = prefsJSON["themeColor"];
+        options::themeColor = val;
+      }
     }
 
   }
@@ -109,6 +113,7 @@ void writePrefsFile() {
       {"windowHeight", windowHeight},
       {"windowPosX", posX},
       {"windowPosY", posY},
+      {"themeColor", options::themeColor},
   };
 
   // Write out json object
@@ -689,7 +694,7 @@ void buildPolyscopeGui() {
 
   // Create window
   static bool showPolyscopeWindow = true;
-  ImGui::SetNextWindowPos(ImVec2(imguiStackMargin, imguiStackMargin));
+  ImGui::SetNextWindowPos(ImVec2(imguiStackMargin, 4 * imguiStackMargin));
   ImGui::SetNextWindowSize(ImVec2(leftWindowsWidth, 0.));
 
   ImGui::Begin("Polyscope", &showPolyscopeWindow);
@@ -788,11 +793,28 @@ void buildStructureGui() {
   // Create window
   static bool showStructureWindow = true;
 
-  ImGui::SetNextWindowPos(ImVec2(imguiStackMargin, lastWindowHeightPolyscope + 2 * imguiStackMargin));
+  ImGui::SetNextWindowPos(ImVec2(imguiStackMargin, lastWindowHeightPolyscope + 5 * imguiStackMargin));
   ImGui::SetNextWindowSize(
-      ImVec2(leftWindowsWidth, view::windowHeight - lastWindowHeightPolyscope - 3 * imguiStackMargin));
+      ImVec2(leftWindowsWidth, view::windowHeight - lastWindowHeightPolyscope - 6 * imguiStackMargin));
 
   ImGui::Begin("Structures", &showStructureWindow);
+
+  // only show groups if there are any
+  if (state::groups.size() > 0) {
+    if (ImGui::CollapsingHeader("Groups", ImGuiTreeNodeFlags_DefaultOpen)) {
+      for (auto& x : state::groups) {
+        if (x.second->isRootGroup() && !(x.second->isEmptyGroup())) {
+          x.second->buildUI();
+        }
+      }
+    }
+  }
+
+  // groups have an option to hide structures from this list; assemble a list of structures to skip
+  std::unordered_set<Structure*> structuresToSkip;
+  for (auto& x : state::groups) {
+    x.second->appendStructuresToSkip(structuresToSkip);
+  }
 
   for (auto catMapEntry : state::structures) {
     std::string catName = catMapEntry.first;
@@ -813,6 +835,11 @@ void buildStructureGui() {
       for (auto x : structureMap) {
         ImGui::SetNextTreeNodeOpen(structureMap.size() <= 8,
                                    ImGuiCond_FirstUseEver); // closed by default if more than 8
+
+        if (structuresToSkip.find(x.second) != structuresToSkip.end()) {
+          continue;
+        }
+
         x.second->buildUI();
       }
     }
@@ -852,7 +879,7 @@ void buildUserGuiAndInvokeCallback() {
 
   if (!state::userCallbacks.empty()) {
     if (options::buildGui && options::openImGuiWindowForUserCallback) {
-      lastWindowHeightUser = -imguiStackMargin;
+      lastWindowHeightUser = 2 * imguiStackMargin;
       for (size_t i = 0; i < state::userCallbacks.size(); i++) {
         ImGui::SetNextWindowPos(ImVec2(view::windowWidth - (rightWindowsWidth + imguiStackMargin),
                                        lastWindowHeightUser + 2 * imguiStackMargin));
@@ -884,11 +911,16 @@ void draw(bool withUI, bool withContextCallback) {
   render::engine->setBackgroundAlpha(view::bgColor[3]);
   render::engine->clearDisplay();
 
+  //renderMeshDemo();
+
   if (withUI) {
     render::engine->ImGuiNewFrame();
   }
 
-  //renderMeshDemo();
+  // Build the main menu
+  if (withUI) {
+    state::mainMenuCallback();
+  }
 
   // Build the GUI components
   if (withUI) {
@@ -1020,6 +1052,75 @@ void shutdown() {
   render::engine->shutdownImGui();
 }
 
+bool registerGroup(std::string name) {
+  // check if group already exists
+  bool inUse = state::groups.find(name) != state::groups.end();
+  if (inUse) {
+    polyscope::error("Attempted to register group with name " + name + ", but a group with that name already exists");
+    return false;
+  }
+
+  checkInitialized();
+  Group* g = new Group(name);
+  // add to the group map
+  state::groups[g->name] = g;
+
+  return true;
+}
+
+bool setParentGroupOfGroup(std::string child, std::string parent) {
+  // check if child exists
+  bool childExists = state::groups.find(child) != state::groups.end();
+  if (!childExists) {
+    polyscope::error("Attempted to set parent of group " + child + ", but no group with that name exists");
+    return false;
+  }
+
+  // check if parent exists
+  bool parentExists = state::groups.find(parent) != state::groups.end();
+  if (!parentExists) {
+    polyscope::error("Attempted to set parent of group " + child + " to " + parent +
+                     ", but no group with that name exists");
+    return false;
+  }
+
+  // set the parent
+  state::groups[parent]->addChildGroup(state::groups[child]);
+  return true;
+}
+
+bool setParentGroupOfStructure(std::string typeName, std::string child, std::string parent) {
+  // check if parent exists
+  bool parentExists = state::groups.find(parent) != state::groups.end();
+  if (!parentExists) {
+    polyscope::error("Attempted to set parent of " + typeName + " " + child + " to " + parent +
+                     ", but no group with that name exists");
+    return false;
+  }
+
+  // Make sure a map for the type exists
+  if (state::structures.find(typeName) == state::structures.end()) {
+    state::structures[typeName] = std::map<std::string, Structure*>();
+  }
+  std::map<std::string, Structure*>& sMap = state::structures[typeName];
+
+  // check if child exists
+  bool childExists = sMap.find(child) != sMap.end();
+  if (!childExists) {
+    polyscope::error("Attempted to set parent of " + typeName + " " + child + ", but no " + typeName +
+                     "with that name exists");
+    return false;
+  }
+
+  // set the parent
+  state::groups[parent]->addChildStructure(sMap[child]);
+  return true;
+}
+
+bool setParentGroupOfStructure(Structure* child, std::string parent) {
+  return setParentGroupOfStructure(child->typeName(), child->name, parent);
+}
+
 bool registerStructure(Structure* s, bool replaceIfPresent) {
 
   // Make sure a map for the type exists
@@ -1104,6 +1205,40 @@ bool hasStructure(std::string type, std::string name) {
   return sMap.find(name) != sMap.end();
 }
 
+void setGroupEnabled(std::string name, bool enabled) {
+  // Check if group exists
+  if (state::groups.find(name) == state::groups.end()) {
+    error("No group with name " + name + " registered");
+    return;
+  }
+
+  // Group exists, set it
+  state::groups[name]->setEnabled(enabled);
+  return;
+}
+
+void removeGroup(std::string name, bool errorIfAbsent) {
+  // Check if group exists
+  if (state::groups.find(name) == state::groups.end()) {
+    if (errorIfAbsent) {
+      error("No group with name " + name + " registered");
+    }
+    return;
+  }
+
+  // Group exists, remove it
+  Group* g = state::groups[name];
+  state::groups.erase(g->name);
+  delete g;
+  return;
+}
+
+void removeAllGroups() {
+  for (auto& g : state::groups) {
+    delete g.second;
+  }
+  state::groups.clear();
+}
 
 void removeStructure(std::string type, std::string name, bool errorIfAbsent) {
 
@@ -1126,6 +1261,10 @@ void removeStructure(std::string type, std::string name, bool errorIfAbsent) {
 
   // Structure exists, remove it
   Structure* s = sMap[name];
+  // remove it from all existing groups
+  for (auto& g : state::groups) {
+    g.second->removeChildStructure(s);
+  }
   pick::resetSelectionIfStructure(s);
   sMap.erase(s->name);
   delete s;

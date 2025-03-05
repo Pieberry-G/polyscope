@@ -11,6 +11,8 @@ float lengthScale = 1.0;
 std::tuple<glm::vec3, glm::vec3> boundingBox =
     std::tuple<glm::vec3, glm::vec3>{glm::vec3{-1., -1., -1.}, glm::vec3{1., 1., 1.}};
 std::map<std::string, std::map<std::string, Structure*>> structures;
+std::map<std::string, Group*> groups;
+std::function<void()> mainMenuCallback;
 std::vector<std::function<void()>> userCallbacks;
 bool doDefaultMouseInteraction = true;
 

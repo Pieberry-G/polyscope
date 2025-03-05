@@ -55,6 +55,8 @@ public:
   const std::string name; // should be unique amongst registered structures with this type
   std::string uniquePrefix();
 
+  std::string getName() { return name; } // used by pybind to access the name property
+
   // = Length and bounding box
   // (returned in world coordinates, after the object transform is applied)
   std::tuple<glm::vec3, glm::vec3> boundingBox(); // get axis-aligned bounding box
@@ -88,6 +90,7 @@ public:
   bool isEnabled();
   void enableIsolate();                      // enable this structure, disable all of same type
   void setEnabledAllOfType(bool newEnabled); // enable/disable all structures of this type
+
 
   // Options
   Structure* setTransparency(float newVal); // also enables transparency if <1 and transparency is not enabled

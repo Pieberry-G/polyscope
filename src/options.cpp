@@ -45,6 +45,7 @@ int transparencyRenderPasses = 8;
 bool buildGui = true;
 bool openImGuiWindowForUserCallback = true;
 std::function<void()> configureImGuiStyleCallback = configureImGuiStyle;
+std::string themeColor = "Green";
 std::function<std::tuple<ImFontAtlas*, ImFont*, ImFont*>()> prepareImGuiFontsCallback = prepareImGuiFonts;
 
 
