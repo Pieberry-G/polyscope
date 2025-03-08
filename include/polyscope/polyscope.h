@@ -83,6 +83,7 @@ extern size_t facePickIndStart;
 extern size_t edgePickIndStart;
 extern size_t halfedgePickIndStart;
 extern GemCraft::MeshSubset selectedRegion;
+extern size_t interactiveFace;
 extern std::vector<glm::vec3> targetPositions;
 extern std::vector<glm::vec3> targetNormals;
 extern std::vector<glm::vec3> strokePosition;

@@ -25,6 +25,7 @@ size_t facePickIndStart;
 size_t edgePickIndStart;
 size_t halfedgePickIndStart;
 GemCraft::MeshSubset selectedRegion;
+size_t interactiveFace;
 std::vector<glm::vec3> targetPositions;
 std::vector<glm::vec3> targetNormals;
 std::vector<glm::vec3> strokePosition;
