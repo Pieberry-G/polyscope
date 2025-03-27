@@ -2,6 +2,8 @@
 #include "polyscope/custom_render_tools.h"
 #include "polyscope/pick.h"
 
+#include "polyscope/surface_mesh.h"
+
 namespace polyscope {
 namespace customRenderTools {
 
@@ -22,7 +24,12 @@ void updateGBuffer() {
   // Render pos buffer
   for (auto cat : state::structures) {
     for (auto x : cat.second) {
-      if (x.first == "Ring") x.second->drawGBuffer();
+      if (x.first == "Ring") {
+        SurfaceMesh* p = dynamic_cast<SurfaceMesh*>(x.second);
+        if (p) {
+          p->drawGBuffer();
+        }
+      }
     }
   }
 }

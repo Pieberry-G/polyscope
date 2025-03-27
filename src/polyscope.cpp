@@ -13,6 +13,8 @@
 #include "polyscope/render/engine.h"
 #include "polyscope/view.h"
 
+#include "polyscope/surface_mesh.h"
+
 #include "stb_image.h"
 
 #include "json/json.hpp"
@@ -301,6 +303,44 @@ void drawSelectionBox() {
   program->draw();
 }
 
+bool ImGuizmoIsUsing = false;
+
+void drawImGuizmo() {
+  ImGui::SetNextWindowPos(ImVec2(0, 0));
+  ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
+  ImGui::Begin("FullscreenWindow", nullptr,
+               ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                   ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoInputs |
+                   ImGuiWindowFlags_NoBackground);
+
+  Structure* s = state::selectedStructure;
+  if (s != nullptr) {
+
+    ImGuizmo::SetOrthographic(false);
+    ImGuizmo::SetDrawlist();
+    ImGuizmo::SetRect(0, 0, view::windowWidth, view::windowHeight);
+
+    glm::mat4 viewMat = view::getCameraViewMatrix();
+    glm::mat4 projMat = view::getCameraPerspectiveMatrix();
+    glm::mat4 transform = s->getTransform();
+    ImGuizmo::OPERATION gizmoType = ImGuizmo::OPERATION::TRANSLATE;
+    ImGuizmo::Manipulate(glm::value_ptr(viewMat), glm::value_ptr(projMat), gizmoType, ImGuizmo::LOCAL,
+                            glm::value_ptr(transform), nullptr, nullptr);
+    if (ImGuizmo::IsUsing()) {
+      s->setTransformOnly(transform);
+      ImGuizmoIsUsing = true;
+    } else {
+      if (ImGuizmoIsUsing) {
+        auto& eventCallback = render::engine->getEventCallbackFn();
+        GemCraft::AppRenderEvent event("ImGuizmoUsed");
+        eventCallback(event);
+        ImGuizmoIsUsing = false;
+      }
+    }
+  }
+  ImGui::End();
+}
+
 namespace {
 
 float dragDistSinceLastRelease = 0.0;
@@ -356,82 +396,30 @@ void processInputEvents() {
       bool dragLeft = ImGui::IsMouseDragging(0);
       bool dragRight = !dragLeft && ImGui::IsMouseDragging(1); // left takes priority, so only one can be true
 
-      if (render::engine->isKeyDown('f') && ImGui::IsMouseClicked(0)) {
+      if (render::engine->isKeyDown('z') && ImGui::IsMouseClicked(0)) {
         ImVec2 p = ImGui::GetMousePos();
         std::pair<Structure*, size_t> pickResult =
             pick::evaluatePickQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y);
         pick::setSelection(pickResult);
-        if (pickResult.first && pickResult.first->name == "Ring") {
-          std::vector<glm::vec4> data;
-          customRenderTools::updateGBuffer();
-          data = polyscope::render::engine->gBufferFaceIDBuffer->getDataVector4();
-          float faceIDFromBuffer =
-              data[(view::bufferHeight - io.DisplayFramebufferScale.y * (p.y)) * view::bufferWidth +
-                   io.DisplayFramebufferScale.x * (p.x)]
-                  .x;
-          if (faceIDFromBuffer + 1.0f >= 1e-6f) {
-            size_t faceID = static_cast<size_t>(std::round(faceIDFromBuffer));
-            polyscope::state::interactiveFace = faceID;
-            auto& eventCallback = render::engine->getEventCallbackFn();
-            GemCraft::AppRenderEvent event("InteractiveFillRegion");
-            eventCallback(event);
-          }
-        }
+        state::selectedStructure = pickResult.first;
       }
 
-      //// Process geodesic path
-      //if (render::engine->isKeyDown('z') && ImGui::IsMouseClicked(0)) {
-      //  ImVec2 p = ImGui::GetMousePos();
-      //  std::pair<Structure*, size_t> pickResult = pick::evaluatePickQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y);
-      //  pick::setSelection(pickResult);
-      //  if (pickResult.first && pickResult.first->name == "Ring") {
-      //    customRenderTools::updateGBuffer();
-      //    state::startPath = customRenderTools::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
-      //    auto& eventCallback = render::engine->getEventCallbackFn();
-      //    GemCraft::AppRenderEvent event("ShowSourcePoint");
-      //    eventCallback(event);
-      //  }
-      //}
-
-      //if (render::engine->isKeyDown('x') && ImGui::IsMouseClicked(0)) {
-      //  ImVec2 p = ImGui::GetMousePos();
-      //  std::pair<Structure*, size_t> pickResult =
-      //      pick::evaluatePickQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y);
-      //  pick::setSelection(pickResult);
-      //  if (pickResult.first && pickResult.first->name == "Ring") {
-      //    customRenderTools::updateGBuffer();
-      //    state::endPath = customRenderTools::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
-      //    auto& eventCallback = render::engine->getEventCallbackFn();
-      //    GemCraft::AppRenderEvent event("ShowTargetPoint");
-      //    eventCallback(event);
-      //  }
-      //}
-
-      //// Process strokeline
-      //if (false && render::engine->isKeyDown('q') && dragLeft) {
-      //  ImVec2 p = ImGui::GetMousePos();
-      //  std::pair<Structure*, size_t> pickResult = pick::evaluatePickQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y);
-      //  pick::setSelection(pickResult);
-      //  if (pickResult.first && pickResult.first->name == "Ring") {
-      //    customRenderTools::updateGBuffer();
-      //    glm::vec3 position = customRenderTools::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 0);
-      //    glm::vec3 normal = customRenderTools::gBufferQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y, 1);
-
-      //    float distance;
-      //    float minThreshold = state::edgeLengthScale * 0.5;
-      //    float maxThreshold = state::edgeLengthScale * 2.5;
-      //    if (!state::strokePosition.empty()) {
-      //      distance = glm::length(glm::vec3(position - state::strokePosition.back()));
-      //    } 
-      //    if (state::strokePosition.empty() || (distance > minThreshold && distance < maxThreshold)) {
-      //      state::strokePosition.push_back(position);
-      //      state::strokeNormal.push_back(normal);
-      //      auto& eventCallback = render::engine->getEventCallbackFn();
-      //      GemCraft::AppRenderEvent event("ShowRingStroke");
-      //      eventCallback(event);
-      //    }
-      //  }
-      //}
+      if (render::engine->isKeyDown('f') && ImGui::IsMouseClicked(0)) {
+        ImVec2 p = ImGui::GetMousePos();
+        customRenderTools::updateGBuffer();
+        std::vector<glm::vec4> data = polyscope::render::engine->gBufferFaceIDBuffer->getDataVector4();
+        float faceIDFromBuffer =
+            data[(view::bufferHeight - io.DisplayFramebufferScale.y * (p.y)) * view::bufferWidth +
+                io.DisplayFramebufferScale.x * (p.x)]
+                .x;
+        if (faceIDFromBuffer + 1.0f >= 1e-6f) {
+          size_t faceID = static_cast<size_t>(std::round(faceIDFromBuffer));
+          polyscope::state::interactiveFace = faceID;
+          auto& eventCallback = render::engine->getEventCallbackFn();
+          GemCraft::AppRenderEvent event("InteractiveFillRegion");
+          eventCallback(event);
+        }
+      }
 
       // Process selection brush
       if (render::engine->isKeyDown('s') && dragLeft) {
@@ -716,18 +704,20 @@ void renderMeshDemo() {
   for (auto cat : state::structures) {
     for (auto x : cat.second) {
       if (x.first.compare(0, 3, "Gem") == 0) {
-          x.second->drawMeshDemo();
-
-          std::vector<glm::vec4> data = render::engine->meshDemoColor->getDataVector4();
-          unsigned char* buffer = new unsigned char[1024 * 1024 * 4];
-          
-          for (size_t i = 0; i < data.size(); ++i) {
-            buffer[i * 4 + 0] = static_cast<unsigned char>(data[i].r * 255.0f); // R
-            buffer[i * 4 + 1] = static_cast<unsigned char>(data[i].g * 255.0f); // G
-            buffer[i * 4 + 2] = static_cast<unsigned char>(data[i].b * 255.0f); // B
-            buffer[i * 4 + 3] = static_cast<unsigned char>(data[i].a * 255.0f); // A
-          }
-          saveImage(x.first + ".png", buffer, 1024, 1024, 4);
+        SurfaceMesh* p = dynamic_cast<SurfaceMesh*>(x.second);
+        if (p) {
+          p->drawMeshDemo();
+        }
+        std::vector<glm::vec4> data = render::engine->meshDemoColor->getDataVector4();
+        unsigned char* buffer = new unsigned char[1024 * 1024 * 4];
+        
+        for (size_t i = 0; i < data.size(); ++i) {
+          buffer[i * 4 + 0] = static_cast<unsigned char>(data[i].r * 255.0f); // R
+          buffer[i * 4 + 1] = static_cast<unsigned char>(data[i].g * 255.0f); // G
+          buffer[i * 4 + 2] = static_cast<unsigned char>(data[i].b * 255.0f); // B
+          buffer[i * 4 + 3] = static_cast<unsigned char>(data[i].a * 255.0f); // A
+        }
+        saveImage(x.first + ".png", buffer, 1024, 1024, 4);
       }
     }
   }
@@ -1006,6 +996,7 @@ void draw(bool withUI, bool withContextCallback) {
   // Added by cyh
   // Draw the selection box
   drawSelectionBox();
+  drawImGuizmo();
 
   renderSceneToScreen();
 

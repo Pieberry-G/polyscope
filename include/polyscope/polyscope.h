@@ -86,11 +86,9 @@ extern GemCraft::MeshSubset selectedRegion;
 extern size_t interactiveFace;
 extern std::vector<glm::vec3> targetPositions;
 extern std::vector<glm::vec3> targetNormals;
-extern std::vector<glm::vec3> strokePosition;
-extern std::vector<glm::vec3> strokeNormal;
 extern float edgeLengthScale;
 extern std::array<glm::vec2, 2> selectionBox;
-extern glm::vec3 startPath, endPath;
+extern Structure* selectedStructure;
 
 
 // representative center for all registered structures
@@ -177,6 +175,8 @@ void buildUserGuiAndInvokeCallback();
 void mainLoopIteration();
 void initializeImGUIContext();
 void drawStructures();
+void drawSelectionBox();
+void drawImGuizmo();
 
 // Called to check any options that might have been changed and perform appropriate updates. Users generally should not
 // need to call this directly.

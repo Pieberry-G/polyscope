@@ -28,11 +28,9 @@ GemCraft::MeshSubset selectedRegion;
 size_t interactiveFace;
 std::vector<glm::vec3> targetPositions;
 std::vector<glm::vec3> targetNormals;
-std::vector<glm::vec3> strokePosition;
-std::vector<glm::vec3> strokeNormal;
 float edgeLengthScale;
 std::array<glm::vec2, 2> selectionBox = {glm::vec2(-1, -1), glm::vec2(-1, -1)};
-glm::vec3 startPath, endPath;
+Structure* selectedStructure = nullptr;
 
 } // namespace state
 } // namespace polyscope

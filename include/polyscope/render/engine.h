@@ -14,6 +14,7 @@
 #include "polyscope/view.h"
 
 #include "imgui.h"
+#include "ImGuizmo.h"
 
 // Added by cyh
 // This include directive is used to notify the GemCraft event system.

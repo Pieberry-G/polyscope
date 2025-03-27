@@ -74,11 +74,11 @@ public:
 
   // Render the the structure on screen
   virtual void draw() override;
-  virtual void drawMeshDemo() override;
+  void drawMeshDemo();
 
   // Render for picking
   virtual void drawPick() override;
-  virtual void drawGBuffer() override;
+  void drawGBuffer();
 
   virtual void updateObjectSpaceBounds() override;
   virtual std::string typeName() override;

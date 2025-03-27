@@ -35,9 +35,7 @@ public:
 
   // == Render the the structure on screen
   virtual void draw() = 0;
-  virtual void drawMeshDemo() = 0;
   virtual void drawPick() = 0;
-  virtual void drawGBuffer() = 0;
 
   // == Add rendering rules
   std::vector<std::string> addStructureRules(std::vector<std::string> initRules);
@@ -71,6 +69,7 @@ public:
   void rescaleToUnit();
   void resetTransform();
   void setTransform(glm::mat4x4 transform);
+  void setTransformOnly(glm::mat4x4 transform);
   void setPosition(glm::vec3 vec);   // set the transform translation to be vec
   void translate(glm::vec3 vec); // *adds* vec to the position
   glm::mat4x4 getTransform();

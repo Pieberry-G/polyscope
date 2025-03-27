@@ -176,6 +176,10 @@ void Structure::setTransform(glm::mat4x4 transform) {
   updateStructureExtents();
 }
 
+void Structure::setTransformOnly(glm::mat4x4 transform) {
+  objectTransform = transform;
+}
+
 void Structure::setPosition(glm::vec3 vec) {
   objectTransform.get()[3][0] = vec.x;
   objectTransform.get()[3][1] = vec.y;
