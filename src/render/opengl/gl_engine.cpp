@@ -1821,6 +1821,8 @@ bool GLEngine::windowRequestsClose() {
   return false;
 }
 
+void* GLEngine::getNativeWindow() const { return mainWindow; }
+
 void GLEngine::pollEvents() { glfwPollEvents(); }
 
 bool GLEngine::isKeyPressed(char c) {

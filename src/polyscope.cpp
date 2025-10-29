@@ -76,6 +76,10 @@ void readPrefsFile() {
         int val = prefsJSON["windowPosY"];
         if (val >= 0 && val < 10000) view::initWindowPosY = val;
       }
+      if (prefsJSON.count("themeColor") > 0) {
+        std::string val = prefsJSON["themeColor"];
+        options::themeColor = stringToThemeColor(val);
+      }
     }
 
   }
@@ -108,6 +112,7 @@ void writePrefsFile() {
       {"windowHeight", windowHeight},
       {"windowPosX", posX},
       {"windowPosY", posY},
+      {"themeColor", themeColorToString(options::themeColor)},
   };
 
   // Write out json object
@@ -466,7 +471,7 @@ void buildPolyscopeGui() {
 
   // Create window
   static bool showPolyscopeWindow = true;
-  ImGui::SetNextWindowPos(ImVec2(imguiStackMargin, imguiStackMargin));
+  ImGui::SetNextWindowPos(ImVec2(imguiStackMargin, 4 * imguiStackMargin));
   ImGui::SetNextWindowSize(ImVec2(leftWindowsWidth, 0.));
 
   ImGui::Begin("Polyscope", &showPolyscopeWindow);
@@ -565,9 +570,9 @@ void buildStructureGui() {
   // Create window
   static bool showStructureWindow = true;
 
-  ImGui::SetNextWindowPos(ImVec2(imguiStackMargin, lastWindowHeightPolyscope + 2 * imguiStackMargin));
+  ImGui::SetNextWindowPos(ImVec2(imguiStackMargin, lastWindowHeightPolyscope + 5 * imguiStackMargin));
   ImGui::SetNextWindowSize(
-      ImVec2(leftWindowsWidth, view::windowHeight - lastWindowHeightPolyscope - 3 * imguiStackMargin));
+      ImVec2(leftWindowsWidth, view::windowHeight - lastWindowHeightPolyscope - 6 * imguiStackMargin));
 
   ImGui::Begin("Structures", &showStructureWindow);
 
@@ -627,29 +632,27 @@ void buildUserGuiAndInvokeCallback() {
     return;
   }
 
-  if (state::userCallback) {
-
+  if (!state::userCallbacks.empty()) {
     if (options::buildGui && options::openImGuiWindowForUserCallback) {
-      ImGui::PushID("user_callback");
-      ImGui::SetNextWindowPos(ImVec2(view::windowWidth - (rightWindowsWidth + imguiStackMargin), imguiStackMargin));
-      ImGui::SetNextWindowSize(ImVec2(rightWindowsWidth, 0.));
+      lastWindowHeightUser = 2 * imguiStackMargin;
+      for (size_t i = 0; i < state::userCallbacks.size(); i++) {
+        ImGui::SetNextWindowPos(ImVec2(view::windowWidth - (rightWindowsWidth + imguiStackMargin),
+                                       lastWindowHeightUser + 2 * imguiStackMargin));
+        ImGui::SetNextWindowSize(ImVec2(rightWindowsWidth, 0.));
 
-      ImGui::Begin("Command UI", nullptr);
-    }
+        // Need to supplement ImGui::PushID() and ImGui::Begin()
+        state::userCallbacks[i]();
 
-    state::userCallback();
-
-    if (options::buildGui && options::openImGuiWindowForUserCallback) {
-      rightWindowsWidth = ImGui::GetWindowWidth();
-      lastWindowHeightUser = imguiStackMargin + ImGui::GetWindowHeight();
-      ImGui::End();
-      ImGui::PopID();
+        rightWindowsWidth = ImGui::GetWindowWidth();
+        lastWindowHeightUser = lastWindowHeightUser + imguiStackMargin + ImGui::GetWindowHeight();
+        ImGui::End();
+        ImGui::PopID();
+      } 
     } else {
-      lastWindowHeightUser = imguiStackMargin;
-    }
-
+      lastWindowHeightUser = -imguiStackMargin;
+    } 
   } else {
-    lastWindowHeightUser = imguiStackMargin;
+    lastWindowHeightUser = -imguiStackMargin;
   }
 }
 
@@ -665,6 +668,11 @@ void draw(bool withUI, bool withContextCallback) {
 
   if (withUI) {
     render::engine->ImGuiNewFrame();
+  }
+
+  // Build the main menu
+  if (withUI) {
+    state::mainMenuCallback();
   }
 
   // Build the GUI components

@@ -46,7 +46,7 @@ bool buildGui = true;
 bool openImGuiWindowForUserCallback = true;
 std::function<void()> configureImGuiStyleCallback = configureImGuiStyle;
 std::function<std::tuple<ImFontAtlas*, ImFont*, ImFont*>()> prepareImGuiFontsCallback = prepareImGuiFonts;
-
+ThemeColor themeColor = ThemeColor::Purple;
 
 // enabled by default in debug mode
 #ifndef NDEBUG

@@ -6,6 +6,7 @@
 #include <tuple>
 
 #include "imgui.h"
+#include "imgui_config.h"
 
 #include "polyscope/scaled_value.h"
 #include "polyscope/types.h"
@@ -96,6 +97,7 @@ extern std::function<void()> configureImGuiStyleCallback;
 // assign your own function to create custom styles. If this callback is null, default fonts will be used.
 extern std::function<std::tuple<ImFontAtlas*, ImFont*, ImFont*>()> prepareImGuiFontsCallback;
 
+extern ThemeColor themeColor;
 
 // === Debug options
 

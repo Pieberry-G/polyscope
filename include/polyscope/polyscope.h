@@ -67,8 +67,11 @@ extern std::vector<SlicePlane*> slicePlanes;
 // Needs more interactions on when to turn this on/off
 extern bool doDefaultMouseInteraction;
 
-// a callback function used to render a "user" gui
-extern std::function<void()> userCallback;
+// a callback function used to render a "main menu" gui
+extern std::function<void()> mainMenuCallback;
+
+// callback functions used to render "user" guis
+extern std::vector<std::function<void()>> userCallbacks;
 
 
 

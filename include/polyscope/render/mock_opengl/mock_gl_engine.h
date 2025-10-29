@@ -224,6 +224,7 @@ public:
   void updateWindowSize(bool force = false) override;
   std::tuple<int, int> getWindowPos() override;
   bool windowRequestsClose() override;
+  void* getNativeWindow() const override;
   void pollEvents() override;
   bool isKeyPressed(char c) override; // for lowercase a-z and 0-9 only
   std::string getClipboardText() override;

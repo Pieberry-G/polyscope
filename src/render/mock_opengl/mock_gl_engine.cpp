@@ -1233,6 +1233,8 @@ std::tuple<int, int> MockGLEngine::getWindowPos() {
 
 bool MockGLEngine::windowRequestsClose() { return false; }
 
+void* MockGLEngine::getNativeWindow() const { return nullptr; }
+
 void MockGLEngine::pollEvents() {}
 
 bool MockGLEngine::isKeyPressed(char c) { return false; }

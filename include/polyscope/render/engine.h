@@ -351,6 +351,7 @@ public:
   virtual void updateWindowSize(bool force = false) = 0;
   virtual std::tuple<int, int> getWindowPos() = 0;
   virtual bool windowRequestsClose() = 0;
+  virtual void* getNativeWindow() const = 0;
   virtual void pollEvents() = 0;
   virtual bool isKeyPressed(char c) = 0; // for lowercase a-z and 0-9 only
   virtual std::string getClipboardText() = 0;
