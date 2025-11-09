@@ -23,7 +23,7 @@
 #include "polyscope/render/opengl/shaders/texture_draw_shaders.h"
 #include "polyscope/render/opengl/shaders/vector_shaders.h"
 #include "polyscope/render/opengl/shaders/volume_mesh_shaders.h"
-
+#include "polyscope/render/opengl/shaders/custom_shaders.h"
 
 #include "stb_image.h"
 
@@ -1239,6 +1239,8 @@ void MockGLEngine::pollEvents() {}
 
 bool MockGLEngine::isKeyPressed(char c) { return false; }
 
+bool MockGLEngine::noKeyDown() { return false; }
+
 void MockGLEngine::ImGuiNewFrame() {
 
   // ImGUI seems to crash without a backend if we don't do this
@@ -1392,6 +1394,7 @@ void MockGLEngine::populateDefaultShadersAndRules() {
   registeredShaderPrograms.insert({"BLUR_RGB", {{TEXTURE_DRAW_VERT_SHADER, BLUR_RGB}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"TRANSFORMATION_GIZMO_ROT", {{TRANSFORMATION_GIZMO_ROT_VERT, TRANSFORMATION_GIZMO_ROT_FRAG}, DrawMode::Triangles}});
 
+  registeredShaderPrograms.insert({"SELECTION_BOX", {{SELECTION_BOX_VERT_SHADER, SELECTION_BOX_FRAG_SHADER}, DrawMode::Lines}});
 
   // === Load rules
 

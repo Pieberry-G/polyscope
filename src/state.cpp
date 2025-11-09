@@ -13,6 +13,7 @@ std::tuple<glm::vec3, glm::vec3> boundingBox =
 std::map<std::string, std::map<std::string, Structure*>> structures;
 std::function<void()> mainMenuCallback;
 std::vector<std::function<void()>> userCallbacks;
+std::function<void()> tickSceneCallback;
 bool doDefaultMouseInteraction = true;
 
 // Lists of things

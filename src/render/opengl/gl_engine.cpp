@@ -23,6 +23,7 @@
 #include "polyscope/render/opengl/shaders/texture_draw_shaders.h"
 #include "polyscope/render/opengl/shaders/vector_shaders.h"
 #include "polyscope/render/opengl/shaders/volume_mesh_shaders.h"
+#include "polyscope/render/opengl/shaders/custom_shaders.h"
 
 #include "stb_image.h"
 
@@ -1831,6 +1832,20 @@ bool GLEngine::isKeyPressed(char c) {
   throw std::runtime_error("keyPressed only supports 0-9, a-z");
 }
 
+bool GLEngine::noKeyDown() {
+  for (char c = '0'; c <= '9'; c++) {
+    if (ImGui::IsKeyDown(GLFW_KEY_0 + (c - '0'))) {
+      return false;
+    }
+  }
+  for (char c = 'a'; c <= 'z'; c++) {
+    if (ImGui::IsKeyDown(GLFW_KEY_A + (c - 'a'))) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void GLEngine::ImGuiNewFrame() {
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
@@ -2080,6 +2095,8 @@ void GLEngine::populateDefaultShadersAndRules() {
   registeredShaderPrograms.insert({"SCALAR_TEXTURE_COLORMAP", {{TEXTURE_DRAW_VERT_SHADER, SCALAR_TEXTURE_COLORMAP}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"BLUR_RGB", {{TEXTURE_DRAW_VERT_SHADER, BLUR_RGB}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"TRANSFORMATION_GIZMO_ROT", {{TRANSFORMATION_GIZMO_ROT_VERT, TRANSFORMATION_GIZMO_ROT_FRAG}, DrawMode::Triangles}});
+
+  registeredShaderPrograms.insert({"SELECTION_BOX", {{SELECTION_BOX_VERT_SHADER, SELECTION_BOX_FRAG_SHADER}, DrawMode::Lines}});
 
   // === Load rules
 

@@ -251,6 +251,46 @@ void drawStructures() {
   }
 }
 
+void drawSelectionBox(glm::vec2 p0, glm::vec2 p1, glm::vec3 color) {
+  p0 = {p0.x / (view::windowWidth - 1), p0.y / (view::windowHeight - 1)};
+  p1 = {p1.x / (view::windowWidth - 1), p1.y / (view::windowHeight - 1)};
+  
+  render::engine->setDepthMode(DepthMode::Disable);
+  render::engine->setBlendMode(BlendMode::Disable);
+
+  std::shared_ptr<render::ShaderProgram> program;
+  program = render::engine->requestShader("SELECTION_BOX", std::vector<std::string>(),
+                                          render::ShaderReplacementDefaults::Process);
+
+  std::vector<glm::vec3> positions;
+  std::vector<glm::vec3> colors;
+
+  glm::vec3 topLeft = glm::vec3(p0.x, p0.y, 0.0f);
+  glm::vec3 topRight = glm::vec3(p1.x, p0.y, 0.0f);
+  glm::vec3 bottomLeft = glm::vec3(p0.x, p1.y, 0.0f);
+  glm::vec3 bottomRight = glm::vec3(p1.x, p1.y, 0.0f);
+
+  positions.push_back(topLeft);
+  positions.push_back(bottomLeft);
+
+  positions.push_back(bottomLeft);
+  positions.push_back(bottomRight);
+
+  positions.push_back(bottomRight);
+  positions.push_back(topRight);
+
+  positions.push_back(topRight);
+  positions.push_back(topLeft);
+
+  for (int i = 0; i < 8; i++) colors.push_back(color);
+
+  // Store data in buffers
+  program->setAttribute("a_position", positions);
+  program->setAttribute("a_color", colors);
+
+  program->draw();
+}
+
 namespace {
 
 float dragDistSinceLastRelease = 0.0;
@@ -306,7 +346,7 @@ void processInputEvents() {
       // Process drags
       bool dragLeft = ImGui::IsMouseDragging(0);
       bool dragRight = !dragLeft && ImGui::IsMouseDragging(1); // left takes priority, so only one can be true
-      if (dragLeft || dragRight) {
+      if (render::engine->noKeyDown() && (dragLeft || dragRight)) {
 
         glm::vec2 dragDelta{io.MouseDelta.x / view::windowWidth, -io.MouseDelta.y / view::windowHeight};
         dragDistSinceLastRelease += std::abs(dragDelta.x);
@@ -753,6 +793,12 @@ void mainLoopIteration() {
 
   // Rendering
   draw();
+
+  // Tick scene
+  if(state::tickSceneCallback) {
+    state::tickSceneCallback();
+  }
+  
   render::engine->swapDisplayBuffers();
 }
 

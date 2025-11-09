@@ -354,6 +354,7 @@ public:
   virtual void* getNativeWindow() const = 0;
   virtual void pollEvents() = 0;
   virtual bool isKeyPressed(char c) = 0; // for lowercase a-z and 0-9 only
+  virtual bool noKeyDown() = 0; // for lowercase a-z and 0-9 only
   virtual std::string getClipboardText() = 0;
   virtual void setClipboardText(std::string text) = 0;
 

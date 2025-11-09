@@ -73,7 +73,8 @@ extern std::function<void()> mainMenuCallback;
 // callback functions used to render "user" guis
 extern std::vector<std::function<void()>> userCallbacks;
 
-
+// a callback function used to tick scene
+extern std::function<void()> tickSceneCallback;
 
 
 // representative center for all registered structures
@@ -150,6 +151,7 @@ void buildUserGuiAndInvokeCallback();
 void mainLoopIteration();
 void initializeImGUIContext();
 void drawStructures();
+void drawSelectionBox(glm::vec2 p0, glm::vec2 p1, glm::vec3 color);
 
 // Called to check any options that might have been changed and perform appropriate updates. Users generally should not
 // need to call this directly.

@@ -91,6 +91,7 @@ if("${POLYSCOPE_BACKEND_OPENGL_MOCK}")
     render/opengl/shaders/cylinder_shaders.cpp  
     render/opengl/shaders/rules.cpp  
     render/opengl/shaders/common.cpp  
+    render/opengl/shaders/custom_shaders.cpp  
   )
 
   list(APPEND BACKEND_HEADERS
