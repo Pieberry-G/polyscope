@@ -14,7 +14,7 @@ const unsigned int* getLatoRegularCompressedData();
 } // namespace render
 
 std::string themeColorToString(ThemeColor color) {
-  const std::unordered_map<ThemeColor, std::string> colorMap = {
+  static const std::unordered_map<ThemeColor, std::string> colorMap = {
       {ThemeColor::Green, "Green"},   {ThemeColor::Red, "Red"},     {ThemeColor::Blue, "Blue"},
       {ThemeColor::Purple, "Purple"}, {ThemeColor::Brown, "Brown"},
   };
@@ -28,7 +28,7 @@ ThemeColor stringToThemeColor(const std::string& colorStr) {
       {"Purple", ThemeColor::Purple}, {"Brown", ThemeColor::Brown},
   };
   auto it = stringMap.find(colorStr);
-  return it != stringMap.end() ? it->second : ThemeColor::Green; // Ä¬ÈÏ·µ»ØGreen
+  return it != stringMap.end() ? it->second : ThemeColor::Green; // é»˜è®¤è¿”å›žGreen
 }
 
 void configureImGuiStyle() {
