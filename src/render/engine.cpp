@@ -572,6 +572,32 @@ void Engine::allocateGlobalBuffersAndPrograms() {
     pickFramebuffer->setDrawBuffers();
   }
 
+  { // Custom render buffer
+    customRenderColor = generateTextureBuffer(TextureFormat::RGBA16F, 1024, 1024);
+    customRenderDepth = generateTextureBuffer(TextureFormat::DEPTH24, 1024, 1024);
+
+    customRenderFrameBuffer = generateFrameBuffer(1024, 1024);
+    customRenderFrameBuffer->addColorBuffer(customRenderColor);
+    customRenderFrameBuffer->addDepthBuffer(customRenderDepth);
+    customRenderFrameBuffer->setDrawBuffers();
+
+    customRenderFrameBuffer->clearColor = glm::vec3{1., 1., 1.};
+    customRenderFrameBuffer->clearAlpha = 1.0;
+  }
+
+  { // Custom image buffer
+    customImageColor = generateTextureBuffer(TextureFormat::RGBA16F, 1024, 1024);
+    customImageDepth = generateTextureBuffer(TextureFormat::DEPTH24, 1024, 1024);
+
+    customImageFrameBuffer = generateFrameBuffer(1024, 1024);
+    customImageFrameBuffer->addColorBuffer(customImageColor);
+    customImageFrameBuffer->addDepthBuffer(customImageDepth);
+    customImageFrameBuffer->setDrawBuffers();
+
+    customImageFrameBuffer->clearColor = glm::vec3{1., 1., 1.};
+    customImageFrameBuffer->clearAlpha = 1.0;
+  }
+
   // Make sure all the buffer sizes are up to date
   updateWindowSize(true);
 

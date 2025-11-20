@@ -74,6 +74,7 @@ public:
 
   // Render the the structure on screen
   virtual void draw() override;
+  void renderImage(glm::mat4 viewMatrix, glm::mat4 projMatrix);
 
   // Render for picking
   virtual void drawPick() override;

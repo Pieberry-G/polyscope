@@ -68,6 +68,7 @@ public:
   virtual std::vector<float> getDataScalar() = 0;
   virtual std::vector<glm::vec2> getDataVector2() = 0;
   virtual std::vector<glm::vec3> getDataVector3() = 0;
+  virtual std::vector<glm::vec4> getDataVector4() = 0;
 
   // Set texture data
   // void fillTextureData1D(std::string name, unsigned char* texData, unsigned int length);
@@ -399,11 +400,15 @@ public:
   std::shared_ptr<FrameBuffer> sceneBuffer, sceneBufferFinal;
   std::shared_ptr<FrameBuffer> pickFramebuffer;
   std::shared_ptr<FrameBuffer> sceneDepthMinFrame;
+  std::shared_ptr<FrameBuffer> customRenderFrameBuffer;
+  std::shared_ptr<FrameBuffer> customImageFrameBuffer;
 
   // Main buffers for rendering
   // sceneDepthMin is an optional texture copy of the depth buffe used for some effects
   std::shared_ptr<TextureBuffer> sceneColor, sceneColorFinal, sceneDepth, sceneDepthMin;
   std::shared_ptr<RenderBuffer> pickColorBuffer, pickDepthBuffer;
+  std::shared_ptr<TextureBuffer> customRenderColor, customRenderDepth;
+  std::shared_ptr<TextureBuffer> customImageColor, customImageDepth;
 
   // General-use programs used by the engine
   std::shared_ptr<ShaderProgram> renderTexturePlain, renderTextureDot3, renderTextureMap3, renderTextureSphereBG;

@@ -346,6 +346,41 @@ void SurfaceMesh::draw() {
   render::engine->setBackfaceCull(); // return to default setting
 }
 
+void SurfaceMesh::renderImage(glm::mat4 viewMatrix, glm::mat4 projMatrix) {
+  if (!isEnabled()) {
+    return;
+  }
+
+  render::engine->setBackfaceCull(backFacePolicy.get() == BackFacePolicy::Cull);
+
+  // If no quantity is drawing the surface, we should draw it
+  if (dominantQuantity == nullptr) {
+
+    if (program == nullptr) {
+      prepare();
+    }
+
+    // Set uniforms
+    setStructureUniforms(*program);
+
+    glm::mat4 modelView = viewMatrix * objectTransform.get();
+    program->setUniform("u_modelView", glm::value_ptr(modelView));
+    program->setUniform("u_projMatrix", glm::value_ptr(projMatrix));
+
+    setSurfaceMeshUniforms(*program);
+    program->setUniform("u_baseColor", getSurfaceColor());
+
+    program->draw();
+  }
+
+  // Draw the quantities
+  for (auto& x : quantities) {
+    x.second->draw();
+  }
+
+  render::engine->setBackfaceCull(); // return to default setting
+}
+
 void SurfaceMesh::drawPick() {
   if (!isEnabled()) {
     return;

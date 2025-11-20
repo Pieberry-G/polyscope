@@ -346,9 +346,22 @@ std::vector<glm::vec2> GLTextureBuffer::getDataVector2() {
 std::vector<glm::vec3> GLTextureBuffer::getDataVector3() {
   if (dimension(format) != 3)
     throw std::runtime_error("called getDataVector3 on texture which does not have a 3 dimensional format");
-  throw std::runtime_error("not implemented");
 
   std::vector<glm::vec3> outData;
+  outData.resize(getTotalSize());
+
+  bind();
+  glGetTexImage(textureType(), 0, formatF(format), GL_FLOAT, static_cast<void*>(&outData.front()));
+  checkGLError();
+
+  return outData;
+}
+
+std::vector<glm::vec4> GLTextureBuffer::getDataVector4() {
+  if (dimension(format) != 4)
+    throw std::runtime_error("called getDataVector4 on texture which does not have a 4 dimensional format");
+
+  std::vector<glm::vec4> outData;
   outData.resize(getTotalSize());
 
   bind();

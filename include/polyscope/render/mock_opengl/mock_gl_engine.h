@@ -36,6 +36,7 @@ public:
   std::vector<float> getDataScalar() override;
   std::vector<glm::vec2> getDataVector2() override;
   std::vector<glm::vec3> getDataVector3() override;
+  std::vector<glm::vec4> getDataVector4() override;
 
   void bind();
 
