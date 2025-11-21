@@ -152,7 +152,7 @@ void mainLoopIteration();
 void initializeImGUIContext();
 void drawStructures();
 void drawSelectionBox(glm::vec2 p0, glm::vec2 p1, glm::vec3 color);
-void renderMultiViewImages(class SurfaceMesh* mesh, const std::vector<glm::mat4>& viewMatrices, const glm::mat4& projMatrix, const std::string& outputPath);
+std::vector<glm::vec4> renderMeshImage(class SurfaceMesh* mesh, const glm::mat4& viewMatrix, const glm::mat4& projMatrix, const glm::vec2& imageSize);
 
 // Called to check any options that might have been changed and perform appropriate updates. Users generally should not
 // need to call this directly.

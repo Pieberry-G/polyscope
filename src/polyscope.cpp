@@ -292,43 +292,31 @@ void drawSelectionBox(glm::vec2 p0, glm::vec2 p1, glm::vec3 color) {
   program->draw();
 }
 
-void renderMultiViewImages(SurfaceMesh* mesh, const std::vector<glm::mat4>& viewMatrices, const glm::mat4& projMatrix, const std::string& outputDir) {
+std::vector<glm::vec4> renderMeshImage(SurfaceMesh* mesh, const glm::mat4& viewMatrix, const glm::mat4& projMatrix, const glm::vec2& imageSize) {
   bool smooth = mesh->isSmoothShade();
   mesh->setSmoothShade(true);
   
   render::FrameBuffer* customRenderFrameBuffer = render::engine->customRenderFrameBuffer.get();
-  customRenderFrameBuffer->resize(1024, 1024);
-  customRenderFrameBuffer->setViewport(0, 0, 1024, 1024);
+  customRenderFrameBuffer->resize(imageSize.x, imageSize.y);
+  customRenderFrameBuffer->setViewport(0, 0, imageSize.x, imageSize.y);
   
   render::FrameBuffer* customImageFrameBuffer = render::engine->customImageFrameBuffer.get();
-  customImageFrameBuffer->resize(1024, 1024);
-  customImageFrameBuffer->setViewport(0, 0, 1024, 1024);
+  customImageFrameBuffer->resize(imageSize.x, imageSize.y);
+  customImageFrameBuffer->setViewport(0, 0, imageSize.x, imageSize.y);
+  
+  render::engine->setDepthMode();
+  render::engine->setBlendMode(BlendMode::Disable);
 
-  for (int i = 0; i < viewMatrices.size(); i++) {
-    render::engine->setDepthMode();
-    render::engine->setBlendMode(BlendMode::Disable);
-
-    if (!customRenderFrameBuffer->bindForRendering()) return;
-    customRenderFrameBuffer->clear();
-    mesh->renderImage(viewMatrices[i], projMatrix);
-    
-    if (!customImageFrameBuffer->bindForRendering()) return;
-    customImageFrameBuffer->clear();
-    render::engine->applyLightingTransform(render::engine->customRenderColor);
-    
-    std::vector<glm::vec4> data = render::engine->customImageColor->getDataVector4();
-    unsigned char* buffer = new unsigned char[1024 * 1024 * 4];
-    for (size_t i = 0; i < data.size(); ++i) {
-      buffer[i * 4 + 0] = static_cast<unsigned char>(glm::clamp(data[i].r, 0.0f, 1.0f) * 255.0f); // R
-      buffer[i * 4 + 1] = static_cast<unsigned char>(glm::clamp(data[i].g, 0.0f, 1.0f) * 255.0f); // G
-      buffer[i * 4 + 2] = static_cast<unsigned char>(glm::clamp(data[i].b, 0.0f, 1.0f) * 255.0f); // B
-      buffer[i * 4 + 3] = static_cast<unsigned char>(glm::clamp(data[i].a, 0.0f, 1.0f) * 255.0f); // A
-    }
-    saveImage(outputDir + std::to_string(i) + ".png", buffer, 1024, 1024, 4);
-    delete[] buffer;
-  }
+  if (!customRenderFrameBuffer->bindForRendering()) return std::vector<glm::vec4>();
+  customRenderFrameBuffer->clear();
+  mesh->renderImage(viewMatrix, projMatrix);
+  
+  if (!customImageFrameBuffer->bindForRendering()) return std::vector<glm::vec4>();
+  customImageFrameBuffer->clear();
+  render::engine->applyLightingTransform(render::engine->customRenderColor);
   
   mesh->setSmoothShade(smooth);
+  return render::engine->customImageColor->getDataVector4();
 }
 
 namespace {
