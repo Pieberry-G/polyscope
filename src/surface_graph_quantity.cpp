@@ -42,6 +42,28 @@ void SurfaceGraphQuantity::draw() {
   lineProgram->draw();
 }
 
+void SurfaceGraphQuantity::drawToCustomBuffer(glm::mat4 viewMatrix, glm::mat4 projMatrix) {
+  if (!isEnabled()) return;
+
+  if (pointProgram == nullptr || lineProgram == nullptr) {
+    createPrograms();
+  }
+
+  setUniforms();
+
+  glm::mat4 modelView = viewMatrix * parent.getTransform();
+  glm::mat4 Pinv = glm::inverse(projMatrix);
+  pointProgram->setUniform("u_modelView", glm::value_ptr(modelView));
+  pointProgram->setUniform("u_projMatrix", glm::value_ptr(projMatrix));
+  pointProgram->setUniform("u_invProjMatrix", glm::value_ptr(Pinv));
+  lineProgram->setUniform("u_modelView", glm::value_ptr(modelView));
+  lineProgram->setUniform("u_projMatrix", glm::value_ptr(projMatrix));
+  lineProgram->setUniform("u_invProjMatrix", glm::value_ptr(Pinv));
+
+  pointProgram->draw();
+  lineProgram->draw();
+}
+
 void SurfaceGraphQuantity::setUniforms() {
   glm::mat4 P = view::getCameraPerspectiveMatrix();
   glm::mat4 Pinv = glm::inverse(P);

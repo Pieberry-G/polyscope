@@ -35,6 +35,7 @@ public:
 
   // == Render the the structure on screen
   virtual void draw() = 0;
+  virtual void drawToCustomBuffer(glm::mat4 viewMatrix, glm::mat4 projMatrix) = 0;
   virtual void drawPick() = 0;
 
   // == Add rendering rules

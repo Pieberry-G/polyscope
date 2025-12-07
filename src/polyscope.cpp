@@ -309,7 +309,7 @@ std::vector<glm::vec4> renderMeshImage(SurfaceMesh* mesh, const glm::mat4& viewM
 
   if (!customRenderFrameBuffer->bindForRendering()) return std::vector<glm::vec4>();
   customRenderFrameBuffer->clear();
-  mesh->renderImage(viewMatrix, projMatrix);
+  mesh->drawToCustomBuffer(viewMatrix, projMatrix);
   
   if (!customImageFrameBuffer->bindForRendering()) return std::vector<glm::vec4>();
   customImageFrameBuffer->clear();

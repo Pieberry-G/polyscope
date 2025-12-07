@@ -26,6 +26,9 @@ template <typename S>
 void Quantity<S>::draw() {}
 
 template <typename S>
+void Quantity<S>::drawToCustomBuffer(glm::mat4 viewMatrix, glm::mat4 projMatrix) {}
+
+template <typename S>
 void Quantity<S>::buildUI() {
 
   if (ImGui::TreeNode(niceName().c_str())) {

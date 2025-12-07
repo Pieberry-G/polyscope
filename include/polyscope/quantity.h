@@ -19,6 +19,7 @@ public:
 
   // Draw the quantity.
   virtual void draw();
+  virtual void drawToCustomBuffer(glm::mat4 viewMatrix, glm::mat4 projMatrix);
 
   // Draw the ImGUI ui elements
   virtual void buildUI();       // draws the tree node and enabled checkbox common to almost all quantities, and calls

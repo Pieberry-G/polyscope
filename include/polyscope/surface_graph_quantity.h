@@ -13,6 +13,7 @@ public:
                        SurfaceMesh& mesh_);
 
   virtual void draw() override;
+  virtual void drawToCustomBuffer(glm::mat4 viewMatrix, glm::mat4 projMatrix) override;
   virtual void buildCustomUI() override;
   virtual std::string niceName() override;
   virtual void refresh() override;
