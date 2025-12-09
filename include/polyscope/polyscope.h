@@ -52,6 +52,7 @@ extern std::string backend;
 
 // lists of all structures in Polyscope, by category
 extern std::map<std::string, std::map<std::string, Structure*>> structures;
+extern Structure* selectedStructure;
 
 // representative length scale for all registered structures
 extern float lengthScale;
@@ -151,6 +152,7 @@ void buildUserGuiAndInvokeCallback();
 void mainLoopIteration();
 void initializeImGUIContext();
 void drawStructures();
+void drawImGuizmo();
 void drawSelectionBox(glm::vec2 p0, glm::vec2 p1, glm::vec3 color);
 std::vector<glm::vec4> renderMeshImage(class SurfaceMesh* mesh, const glm::mat4& viewMatrix, const glm::mat4& projMatrix, const glm::vec2& imageSize);
 

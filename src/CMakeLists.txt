@@ -114,6 +114,7 @@ SET(SRCS
   
   # Core functionality 
   polyscope.cpp
+  polyscope_utilities.cpp
   options.cpp
   internal.cpp
   state.cpp

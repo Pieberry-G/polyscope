@@ -263,6 +263,7 @@ public:
   void setBlendMode(BlendMode newMode = BlendMode::Over) override;
   void setColorMask(std::array<bool, 4> mask = {true, true, true, true}) override;
   void setBackfaceCull(bool newVal) override;
+  void setLineWidth(float lineWidth) override;
 
   // === Windowing and framework things
   void makeContextCurrent() override;

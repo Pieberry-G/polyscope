@@ -11,7 +11,6 @@
 #include "polyscope/pick.h"
 #include "polyscope/render/engine.h"
 #include "polyscope/view.h"
-#include "polyscope/surface_mesh.h"
 
 #include "stb_image.h"
 
@@ -252,72 +251,6 @@ void drawStructures() {
   }
 }
 
-void drawSelectionBox(glm::vec2 p0, glm::vec2 p1, glm::vec3 color) {
-  p0 = {p0.x / (view::windowWidth - 1), p0.y / (view::windowHeight - 1)};
-  p1 = {p1.x / (view::windowWidth - 1), p1.y / (view::windowHeight - 1)};
-  
-  render::engine->setDepthMode(DepthMode::Disable);
-  render::engine->setBlendMode(BlendMode::Disable);
-
-  std::shared_ptr<render::ShaderProgram> program;
-  program = render::engine->requestShader("SELECTION_BOX", std::vector<std::string>(),
-                                          render::ShaderReplacementDefaults::Process);
-
-  std::vector<glm::vec3> positions;
-  std::vector<glm::vec3> colors;
-
-  glm::vec3 topLeft = glm::vec3(p0.x, p0.y, 0.0f);
-  glm::vec3 topRight = glm::vec3(p1.x, p0.y, 0.0f);
-  glm::vec3 bottomLeft = glm::vec3(p0.x, p1.y, 0.0f);
-  glm::vec3 bottomRight = glm::vec3(p1.x, p1.y, 0.0f);
-
-  positions.push_back(topLeft);
-  positions.push_back(bottomLeft);
-
-  positions.push_back(bottomLeft);
-  positions.push_back(bottomRight);
-
-  positions.push_back(bottomRight);
-  positions.push_back(topRight);
-
-  positions.push_back(topRight);
-  positions.push_back(topLeft);
-
-  for (int i = 0; i < 8; i++) colors.push_back(color);
-
-  // Store data in buffers
-  program->setAttribute("a_position", positions);
-  program->setAttribute("a_color", colors);
-
-  program->draw();
-}
-
-std::vector<glm::vec4> renderMeshImage(SurfaceMesh* mesh, const glm::mat4& viewMatrix, const glm::mat4& projMatrix, const glm::vec2& imageSize) {
-  bool smooth = mesh->isSmoothShade();
-  mesh->setSmoothShade(true);
-  
-  render::FrameBuffer* customRenderFrameBuffer = render::engine->customRenderFrameBuffer.get();
-  customRenderFrameBuffer->resize(imageSize.x, imageSize.y);
-  customRenderFrameBuffer->setViewport(0, 0, imageSize.x, imageSize.y);
-  
-  render::FrameBuffer* customImageFrameBuffer = render::engine->customImageFrameBuffer.get();
-  customImageFrameBuffer->resize(imageSize.x, imageSize.y);
-  customImageFrameBuffer->setViewport(0, 0, imageSize.x, imageSize.y);
-  
-  render::engine->setDepthMode();
-  render::engine->setBlendMode(BlendMode::Disable);
-
-  if (!customRenderFrameBuffer->bindForRendering()) return std::vector<glm::vec4>();
-  customRenderFrameBuffer->clear();
-  mesh->drawToCustomBuffer(viewMatrix, projMatrix);
-  
-  if (!customImageFrameBuffer->bindForRendering()) return std::vector<glm::vec4>();
-  customImageFrameBuffer->clear();
-  render::engine->applyLightingTransform(render::engine->customRenderColor);
-  
-  mesh->setSmoothShade(smooth);
-  return render::engine->customImageColor->getDataVector4();
-}
 
 namespace {
 
@@ -411,6 +344,7 @@ void processInputEvents() {
           std::pair<Structure*, size_t> pickResult =
               pick::evaluatePickQuery(io.DisplayFramebufferScale.x * p.x, io.DisplayFramebufferScale.y * p.y);
           pick::setSelection(pickResult);
+          state::selectedStructure = pickResult.first;
         }
 
         // Reset the drag distance after any release
@@ -420,6 +354,7 @@ void processInputEvents() {
       if (ImGui::IsMouseReleased(1)) {
         if (dragDistSinceLastRelease < dragIgnoreThreshold) {
           pick::resetSelection();
+          state::selectedStructure = nullptr;
         }
         dragDistSinceLastRelease = 0.0;
       }
@@ -781,6 +716,8 @@ void draw(bool withUI, bool withContextCallback) {
 
   // Draw the GUI
   if (withUI) {
+    drawImGuizmo();
+    
     // render widgets
     render::engine->bindDisplay();
     for (Widget* w : state::widgets) {

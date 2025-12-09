@@ -1271,6 +1271,8 @@ void MockGLEngine::setColorMask(std::array<bool, 4> mask) {}
 
 void MockGLEngine::setBackfaceCull(bool newVal) {}
 
+void MockGLEngine::setLineWidth(float lineWidth) {}
+
 std::string MockGLEngine::getClipboardText() {
   std::string clipboardData = "";
   return clipboardData;
@@ -1404,7 +1406,8 @@ void MockGLEngine::populateDefaultShadersAndRules() {
   registeredShaderPrograms.insert({"BLUR_RGB", {{TEXTURE_DRAW_VERT_SHADER, BLUR_RGB}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"TRANSFORMATION_GIZMO_ROT", {{TRANSFORMATION_GIZMO_ROT_VERT, TRANSFORMATION_GIZMO_ROT_FRAG}, DrawMode::Triangles}});
 
-  registeredShaderPrograms.insert({"SELECTION_BOX", {{SELECTION_BOX_VERT_SHADER, SELECTION_BOX_FRAG_SHADER}, DrawMode::Lines}});
+  registeredShaderPrograms.insert({"SCREENSPACE_LINE", {{SCREENSPACE_LINE_VERT_SHADER, SCREENSPACE_LINE_FRAG_SHADER}, DrawMode::Lines}});
+  registeredShaderPrograms.insert({"SCREENSPACE_TRIANGLE", {{SCREENSPACE_TRIANGLE_VERT_SHADER, SCREENSPACE_TRIANGLE_FRAG_SHADER}, DrawMode::Triangles}});
 
   // === Load rules
 
