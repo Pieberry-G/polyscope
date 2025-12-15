@@ -377,7 +377,7 @@ void SurfaceMesh::drawToCustomBuffer(glm::mat4 viewMatrix, glm::mat4 projMatrix)
   for (auto& x : quantities) {
     x.second->drawToCustomBuffer(viewMatrix, projMatrix);
   }
-
+  
   render::engine->setBackfaceCull(); // return to default setting
 }
 

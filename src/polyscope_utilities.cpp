@@ -221,7 +221,7 @@ std::vector<glm::vec4> renderMeshImage(SurfaceMesh* mesh, const glm::mat4& viewM
   
   mesh->setSmoothShade(smooth);
 
-  drawAxis(viewMatrix, projMatrix);
+  // drawAxis(viewMatrix, projMatrix);
   
   return render::engine->customImageColor->getDataVector4();
 }

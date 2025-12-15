@@ -74,7 +74,7 @@ public:
 
   // Render the the structure on screen
   virtual void draw() override;
-  void drawToCustomBuffer(glm::mat4 viewMatrix, glm::mat4 projMatrix);
+  virtual void drawToCustomBuffer(glm::mat4 viewMatrix, glm::mat4 projMatrix) override;
 
   // Render for picking
   virtual void drawPick() override;
